@@ -26,10 +26,10 @@
  *   perceptra -c <ds-main.ini|.yml> [-a <app.ini>] [--log-level LEVEL] [--no-force-tcp]
  *             [--shutdown-timeout S]
  *
- * Lifecycle: parse configs -> create_pipeline() -> PAUSED -> PLAYING -> main loop.
- * SIGINT/SIGTERM (or the pipeline reporting quit) -> leave the loop -> destroy_pipeline(), which
- * sends EOS, drains the bus and sets the pipeline to NULL -> exit. Teardown is bounded by a
- * watchdog (--shutdown-timeout, see shutdown_watchdog()).
+ * Lifecycle: parse configs -> task handler + publisher -> create_pipeline() -> PAUSED -> PLAYING
+ * -> main loop. SIGINT/SIGTERM (or the pipeline reporting quit) -> leave the loop -> stop event
+ * creation -> flush the publisher -> destroy_pipeline() (EOS, drain bus, NULL) -> exit. The whole
+ * shutdown is bounded by a watchdog (--shutdown-timeout, see shutdown_watchdog()).
  *
  * Exit codes: 0 clean shutdown, 1 runtime/pipeline error, 2 usage or configuration error.
  */
@@ -37,15 +37,19 @@
 #include <glib.h>
 #include <gst/gst.h>
 #include <signal.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "deepstream_app.h"
 
 #include "app_config.h"
+#include "event_model.h"
 #include "log.h"
 #include "perf.h"
 #include "probe.h"
+#include "publisher.h"
+#include "task_registry.h"
 
 #define PERCEPTRA_VERSION "0.1.0-dev"
 #define EXIT_RUNTIME_ERROR 1
@@ -66,6 +70,7 @@ GST_DEBUG_CATEGORY(NVDS_APP);
 static GMainLoop *main_loop = NULL;
 static AppCtx *app_ctx = NULL;
 static gboolean signal_received = FALSE;
+static PerceptraPublisher *publisher = NULL;
 
 static gchar *opt_ds_config = NULL;
 static gchar *opt_app_config = NULL;
@@ -114,18 +119,17 @@ static gboolean check_pipeline_quit(gpointer user_data) {
 
 /* Shutdown watchdog. In DeepStream 9.1, once a stream has been added to nvmultiurisrcbin,
  * setting the pipeline to NULL can block forever inside nvstreammux (gst_pad_stop_task on the
- * muxer's push-loop task), see docs/DEVIATIONS.md #8. Teardown is therefore bounded: if
- * destroy_pipeline() has not returned after --shutdown-timeout seconds, log and _exit() with the
- * exit code already decided. Anything that must not be lost (e.g. the event publisher, M4) is
- * flushed BEFORE pipeline teardown; the OS reclaims process memory and GPU contexts on exit. */
+ * muxer's push-loop task), see docs/DEVIATIONS.md #8. Shutdown is therefore bounded: if it has
+ * not finished after --shutdown-timeout seconds, log and _exit() with the exit code already
+ * decided. The event publisher is flushed BEFORE pipeline teardown (within this budget), so no
+ * queued event depends on the teardown; the OS reclaims memory and GPU contexts on exit. */
 static gint watchdog_exit_code = 0;
 
 static gpointer shutdown_watchdog(gpointer user_data) {
     gint timeout_s = GPOINTER_TO_INT(user_data);
     g_usleep((gulong)timeout_s * G_USEC_PER_SEC);
-    PLOG_WARN("main",
-              "event=shutdown_timeout stage=destroy_pipeline timeout_s=%d action=exit code=%d",
-              timeout_s, g_atomic_int_get(&watchdog_exit_code));
+    PLOG_WARN("main", "event=shutdown_timeout timeout_s=%d action=exit code=%d", timeout_s,
+              g_atomic_int_get(&watchdog_exit_code));
     _exit(g_atomic_int_get(&watchdog_exit_code));
     return NULL;
 }
@@ -137,6 +141,42 @@ static void arm_shutdown_watchdog(int exit_code) {
     GThread *t = g_thread_new("shutdown-watchdog", shutdown_watchdog,
                               GINT_TO_POINTER(opt_shutdown_timeout_s));
     g_thread_unref(t); /* detached: the process exits normally if teardown completes */
+}
+
+/* Events on stdout: keep a private dup of fd 1 for the JSON Lines and point fd 1 at stderr, so
+ * DeepStream/GStreamer console output (g_print) cannot interleave with the event stream. */
+static int take_stdout_for_events(void) {
+    fflush(stdout);
+    int fd = dup(STDOUT_FILENO);
+    if (fd >= 0 && dup2(STDERR_FILENO, STDOUT_FILENO) < 0) {
+        close(fd);
+        return -1;
+    }
+    return fd;
+}
+
+static PerceptraPublisher *create_publisher(const PerceptraAppConfig *cfg,
+                                            const PerceptraEventContext *ctx, GError **error) {
+    const PerceptraPublishConfig *p = &cfg->publish;
+    PerceptraBackend *backend = NULL;
+    switch (p->backend) {
+    case PERCEPTRA_BACKEND_NONE:
+        return NULL;
+    case PERCEPTRA_BACKEND_STDOUT:
+        backend = perceptra_backend_stream_new_fd(take_stdout_for_events(), error);
+        break;
+    case PERCEPTRA_BACKEND_FILE:
+        backend = perceptra_backend_file_new(p->file_path, error);
+        break;
+    case PERCEPTRA_BACKEND_KAFKA:
+        backend = perceptra_backend_kafka_new(p->kafka_brokers, p->kafka_topic,
+                                              p->kafka_properties_file, cfg->service_name, error);
+        break;
+    }
+    if (backend == NULL)
+        return NULL;
+    return perceptra_publisher_new(backend, ctx, p->queue_max_events, p->on_full,
+                                   p->backend == PERCEPTRA_BACKEND_KAFKA && p->kafka_key_sensor_id);
 }
 
 static gboolean is_yaml(const char *path) {
@@ -233,7 +273,45 @@ int main(int argc, char *argv[]) {
     if (opt_force_tcp)
         apply_force_tcp(&app_ctx->config);
 
-    perceptra_probe_init(app_cfg.probe_log_every_n_frames);
+    const PerceptraTaskHandler *handler = perceptra_task_get(app_cfg.model_task);
+    GError *task_error = NULL;
+    if (handler == NULL || !handler->init(&task_error)) {
+        PLOG_ERROR("main", "event=config_error error=\"task '%s': %s\"", app_cfg.model_task,
+                   task_error ? task_error->message : "unknown task");
+        g_clear_error(&task_error);
+        exit_code = EXIT_USAGE_ERROR;
+        goto done;
+    }
+    if (app_cfg.timestamp_source != PERCEPTRA_TS_SYSTEM)
+        PLOG_WARN("main", "event=timestamps_fallback configured=%s used=system reason=\"M5\"",
+                  perceptra_timestamp_source_name(app_cfg.timestamp_source));
+
+    const PerceptraEventContext event_ctx = {
+        .service = app_cfg.service_name,
+        .model_name = app_cfg.model_name,
+        .model_version = app_cfg.model_version,
+        .model_task = app_cfg.model_task,
+    };
+    GError *pub_error = NULL;
+    publisher = create_publisher(&app_cfg, &event_ctx, &pub_error);
+    if (pub_error) {
+        PLOG_ERROR("main", "event=publisher_error backend=%s error=\"%s\"",
+                   perceptra_backend_kind_name(app_cfg.publish.backend), pub_error->message);
+        g_clear_error(&pub_error);
+        exit_code = EXIT_USAGE_ERROR;
+        goto done;
+    }
+    if (publisher == NULL)
+        PLOG_WARN("main", "event=no_publisher reason=\"[publish] backend not set\"");
+
+    const PerceptraProbeConfig probe_cfg = {
+        .log_every_n_frames = app_cfg.probe_log_every_n_frames,
+        .publisher = publisher,
+        .handler = handler,
+        .interval_frames = app_cfg.publish.interval_frames,
+        .include_empty_frames = app_cfg.publish.include_empty_frames,
+    };
+    perceptra_probe_init(&probe_cfg);
 
     if (!create_pipeline(app_ctx, perceptra_probe, NULL, perceptra_perf_cb, NULL)) {
         PLOG_ERROR("main", "event=pipeline_error error=\"create_pipeline failed\"");
@@ -273,19 +351,30 @@ int main(int argc, char *argv[]) {
         exit_code = EXIT_RUNTIME_ERROR;
 
 done:
+    if (app_ctx && app_ctx->return_value == -1 && exit_code == 0 && !signal_received)
+        exit_code = EXIT_RUNTIME_ERROR;
+    if (app_ctx && app_ctx->pipeline.pipeline)
+        arm_shutdown_watchdog(exit_code); /* bounds flush + teardown */
+    /* 1. no new events  2. flush the publisher  3. tear down the pipeline */
+    perceptra_probe_stop_events();
+    if (publisher) {
+        guint budget = app_cfg.publish.shutdown_flush_timeout_ms;
+        if (opt_shutdown_timeout_s > 0) /* keep >= 2 s of the watchdog budget for teardown */
+            budget = MIN(budget, (guint)MAX(opt_shutdown_timeout_s * 1000 - 2000, 0));
+        PLOG_INFO("main", "event=shutdown stage=flush_publisher timeout_ms=%u", budget);
+        perceptra_publisher_shutdown(publisher, budget);
+    }
     if (app_ctx) {
-        if (app_ctx->return_value == -1 && exit_code == 0 && !signal_received)
-            exit_code = EXIT_RUNTIME_ERROR;
         if (app_ctx->pipeline.pipeline) {
             PLOG_INFO("main", "event=shutdown stage=destroy_pipeline timeout_s=%d",
                       opt_shutdown_timeout_s);
-            arm_shutdown_watchdog(exit_code);
             destroy_pipeline(app_ctx); /* sends EOS, drains the bus, sets NULL */
             PLOG_INFO("main", "event=shutdown stage=pipeline_destroyed");
         }
         g_free(app_ctx);
         app_ctx = NULL;
     }
+    g_clear_pointer(&publisher, perceptra_publisher_free);
     if (main_loop)
         g_main_loop_unref(main_loop);
     perceptra_app_config_clear(&app_cfg);

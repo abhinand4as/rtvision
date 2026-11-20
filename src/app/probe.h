@@ -5,9 +5,10 @@
 
 /* probe.h - perceptra_probe: runs on the streaming thread after detection/tracking.
  *
- * M1: counts frames and objects per stream and logs every N frames at debug level.
- * Task dispatch and event building are added in M4. The probe must never block: no network
- * I/O, no unbounded allocation, no per-object info logging (CLAUDE.md rule 5).
+ * Per frame: counters; on frames selected by publish.interval_frames it builds one
+ * PerceptraFrameEvent via the task handler and enqueues it on the publisher (non-blocking).
+ * Rules (CLAUDE.md rule 5): no network I/O, no unbounded allocation (objects per event are
+ * capped at PERCEPTRA_MAX_OBJECTS_PER_EVENT), no per-object logging at info level.
  */
 #ifndef PERCEPTRA_PROBE_H
 #define PERCEPTRA_PROBE_H
@@ -16,11 +17,27 @@
 #include <gst/gst.h>
 
 #include "deepstream_app.h"
+#include "event_model.h"
+#include "publisher.h"
+#include "task_registry.h"
 
 G_BEGIN_DECLS
 
-/* every_n_frames: per-stream debug log interval (0 disables the periodic log). */
-void perceptra_probe_init(guint every_n_frames);
+#define PERCEPTRA_MAX_OBJECTS_PER_EVENT 1024
+
+typedef struct {
+    guint log_every_n_frames;            /* per-stream debug log interval (0 = off) */
+    PerceptraPublisher *publisher;       /* NULL: no events */
+    const PerceptraTaskHandler *handler; /* required when publisher != NULL */
+    guint interval_frames;               /* emit when frame_num % interval_frames == 0 */
+    gboolean include_empty_frames;
+} PerceptraProbeConfig;
+
+/* Copies cfg. Call before the pipeline starts. */
+void perceptra_probe_init(const PerceptraProbeConfig *cfg);
+
+/* After this, no more events are enqueued (shutdown step 1). Thread-safe. */
+void perceptra_probe_stop_events(void);
 
 /* bbox_generated_callback for create_pipeline() (post analytics: PGIE/tracker). */
 void perceptra_probe(AppCtx *app_ctx, GstBuffer *buf, NvDsBatchMeta *batch_meta, guint index);
@@ -28,6 +45,7 @@ void perceptra_probe(AppCtx *app_ctx, GstBuffer *buf, NvDsBatchMeta *batch_meta,
 /* Totals across all streams (thread-safe reads). */
 guint64 perceptra_probe_frames_total(void);
 guint64 perceptra_probe_objects_total(void);
+guint64 perceptra_probe_events_built(void);
 
 G_END_DECLS
 
