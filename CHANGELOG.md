@@ -5,6 +5,12 @@ All notable changes are documented here (format: Keep a Changelog; versioning: S
 
 ## [Unreleased]
 ### Added
+- M3 configuration system: `perceptra-run` (CLI > env > default file selection, `PERCEPTRA__…` env
+  overrides, JSON Schema validation with field paths, task check, model licence gate with exit 3,
+  ONNX output check, config generation, engine cache, `execv` of the binary); `gen_configs.py` with
+  Jinja templates for `ds-main.ini`, `pgie.ini`, `parser.ini`, `app.ini`, `kafka.properties`;
+  `onnx_inspect` CLI; golden configs for the 3 example models; COCO `labels.txt` for the YOLO26 and
+  RT-DETR examples; `tests/integration/make_synthetic_onnx.py` (synthetic `yolo_e2e` test model).
 - M2 parser library `libperceptra_parsers.so`: pure C++17 core (`src/parsers/core/`) with the
   `yolo_e2e`, `yolo_raw` (both layouts), `detr` (4 box formats; sigmoid/softmax/none; background
   column) and `efficient_nms` decoders, common post-steps and a strict `parser.ini` reader; DeepStream
@@ -30,4 +36,5 @@ All notable changes are documented here (format: Keep a Changelog; versioning: S
 - Specification package: architecture, implementation plan, configuration, parser contract, event schema v1, API, testing, licensing policy, roadmap.
 
 ### Changed
+- Image entry point is `perceptra-run`; the hand-written M1 configs in `config/dev/` were removed.
 - JSON Schemas carry their SPDX identifier in a top-level `"$comment"` (see `docs/DEVIATIONS.md` #1).

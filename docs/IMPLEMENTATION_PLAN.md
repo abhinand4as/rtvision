@@ -91,7 +91,7 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 
 **Acceptance (GPU):** the container starts with 0 streams; `POST /api/v1/stream/add` with `file:///opt/nvidia/deepstream/deepstream/samples/streams/sample_1080p_h264.mp4` → FPS logs appear; `stream/remove` works; SIGTERM exits 0.
 
-**Status:** done (2026-11-20) on RTX 5070 Ti Laptop / driver 595.99 / `deepstream:9.1-samples-multiarch`. 0 streams at start; add → HTTP 200, ~30 FPS, 16–27 objects/frame; remove → HTTP 200, `active_sources=0`; `docker stop` → exit 0 in 8.6 s via the shutdown watchdog (DeepStream 9.1 teardown hang, `docs/DEVIATIONS.md` #8). Hand-written configs: `config/dev/ds-main.m1.ini`, `config/dev/app.m1.ini`. Python tools in the runtime image follow in M3.
+**Status:** done (2026-11-20) on RTX 5070 Ti Laptop / driver 595.99 / `deepstream:9.1-samples-multiarch`. 0 streams at start; add → HTTP 200, ~30 FPS, 16–27 objects/frame; remove → HTTP 200, `active_sources=0`; `docker stop` → exit 0 in 8.6 s via the shutdown watchdog (DeepStream 9.1 teardown hang, `docs/DEVIATIONS.md` #8). Hand-written configs `config/dev/*.m1.ini` (removed in M3, replaced by generated configs).
 
 ### M2 — Parser library
 - [x] `core/`: implement `yolo_e2e`, `yolo_raw` (both layouts, auto-detect by shape), `detr` (box formats `cxcywh_norm`, `xyxy_norm`, `xyxy_px`; activations `sigmoid`, `softmax`, `none`; optional background class), `efficient_nms`.
@@ -104,13 +104,15 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 **Status:** done (2026-11-20). `make -C src/parsers test-core`: 15/15 pass on the host (GCC 11, no DeepStream) and in the image (GCC 13), under ASan + UBSan. In the Docker build stage `make -C src/parsers test` also runs 5 adapter tests (by-name layer lookup, nvinfer thresholds, shape error → `false`, family mismatch, INT32 conversion) and builds `libperceptra_parsers.so`, which exports exactly the 4 `NvDsInferParsePerceptra_*` symbols and is installed at `/opt/perceptra/lib/`. Accuracy against real models is verified with user-supplied ONNX files in M7.
 
 ### M3 — Configuration system (`perceptra-run`)
-- [ ] `schemas/service_config.schema.json`, `schemas/model.schema.json` (per `docs/CONFIGURATION.md`).
-- [ ] `gen_configs.py`: render the templates; derive every batch-size touch point from `service.max_streams`; derive `filter-out-class-ids` from `classes.keep`; engine file name `<model>_b<batch>_<precision>_gpu<id>_trt<ver>.engine`.
-- [ ] `onnx_inspect.py`: load ONNX (no inference), check output names/ranks against the family, and warn if a fixed batch dimension < `max_streams`.
-- [ ] `run.py`: validate → generate into `/tmp/perceptra/generated` → export `PERCEPTRA_PARSER_CONFIG` → `os.execv` the binary.
-- [ ] Licence gate: if `model.license.spdx` is not in the permissive allow-list, print a prominent warning, and refuse to start unless `PERCEPTRA_ACCEPT_MODEL_LICENSE=<spdx>` is set.
+- [x] `schemas/service_config.schema.json`, `schemas/model.schema.json` (per `docs/CONFIGURATION.md`).
+- [x] `gen_configs.py`: render the templates; derive every batch-size touch point from `service.max_streams`; derive `filter-out-class-ids` from `classes.keep`; engine file name `<model>_b<batch>_<precision>_gpu<id>_trt<ver>.engine`.
+- [x] `onnx_inspect.py`: load ONNX (no inference), check output names/ranks against the family, and warn if a fixed batch dimension < `max_streams`.
+- [x] `run.py`: validate → generate into `/tmp/perceptra/generated` → export `PERCEPTRA_PARSER_CONFIG` → `os.execv` the binary.
+- [x] Licence gate: if `model.license.spdx` is not in the permissive allow-list, print a prominent warning, and refuse to start unless `PERCEPTRA_ACCEPT_MODEL_LICENSE=<spdx>` is set.
 
 **Acceptance:** `pytest -q tests/python` passes (golden generated configs for the 3 example models); invalid YAML produces a clear error with the field path.
+
+**Status:** done (2026-11-20). `pytest -q`: 83 passed (schemas, env overrides, event schema, golden configs for the 3 example models, mapping rules, licence gate exit 3, ONNX checks on synthetic graphs, `perceptra-run` dry runs). Errors name the file and field path, e.g. `service.max_streams: -1 is less than the minimum of 1`. GPU check: the image's entry point is now `perceptra-run`; TrafficCamNet (builtin) and a synthetic `yolo_e2e` ONNX (`tests/integration/make_synthetic_onnx.py`, read-only models mount) run from generated configs, the synthetic model yields exactly the 2 expected detections per frame through `libperceptra_parsers.so`, and its engine is cached and reused on restart (deviation #13).
 
 ### M4 — Events and publisher
 - [ ] `event_model.h`, `task_detect.c` (bbox rescale to source resolution, track id `null` when untracked, label from `obj_label`), `event_serialize.c` per `docs/EVENT_SCHEMA.md`.
