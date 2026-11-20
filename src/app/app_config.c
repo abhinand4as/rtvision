@@ -24,6 +24,7 @@ void perceptra_app_config_init(PerceptraAppConfig *cfg) {
     cfg->model_task = g_strdup("detect");
     cfg->model_family = g_strdup("unknown");
     cfg->model_license = g_strdup("unknown");
+    cfg->model_precision = g_strdup("unknown");
     cfg->publish.backend = PERCEPTRA_BACKEND_NONE;
     cfg->publish.interval_frames = 30;
     cfg->publish.queue_max_events = 10000;
@@ -42,6 +43,8 @@ void perceptra_app_config_clear(PerceptraAppConfig *cfg) {
     g_clear_pointer(&cfg->model_task, g_free);
     g_clear_pointer(&cfg->model_family, g_free);
     g_clear_pointer(&cfg->model_license, g_free);
+    g_clear_pointer(&cfg->model_precision, g_free);
+    g_clear_pointer(&cfg->hot_swap_file, g_free);
     g_clear_pointer(&cfg->publish.kafka_brokers, g_free);
     g_clear_pointer(&cfg->publish.kafka_topic, g_free);
     g_clear_pointer(&cfg->publish.kafka_properties_file, g_free);
@@ -142,6 +145,14 @@ gboolean perceptra_app_config_load(const char *path, PerceptraAppConfig *cfg, GE
     take_string(kf, "model", "task", &cfg->model_task);
     take_string(kf, "model", "family", &cfg->model_family);
     take_string(kf, "model", "license", &cfg->model_license);
+    take_string(kf, "model", "precision", &cfg->model_precision);
+    take_string(kf, "inference", "hot_swap_file", &cfg->hot_swap_file);
+    if (!cfg->model_license)
+        cfg->model_license = g_strdup("unknown");
+    if (!cfg->model_precision)
+        cfg->model_precision = g_strdup("unknown");
+    if (!cfg->model_family)
+        cfg->model_family = g_strdup("unknown");
     if (!cfg->service_name || !cfg->model_name || !cfg->model_version || !cfg->model_task) {
         g_set_error(error, G_KEY_FILE_ERROR, G_KEY_FILE_ERROR_INVALID_VALUE,
                     "[service] name and [model] name/version/task must not be empty");
@@ -213,6 +224,12 @@ gboolean perceptra_app_config_load(const char *path, PerceptraAppConfig *cfg, GE
         g_free(level);
         if (!valid)
             goto out;
+    }
+    if (!take_uint(kf, "ops", "port", 0, &cfg->ops_port, error))
+        goto out;
+    if (cfg->ops_port > 65535) {
+        invalid(error, "ops", "port", "", "0..65535");
+        goto out;
     }
     if (!take_uint(kf, "probe", "log_every_n_frames", 0, &cfg->probe_log_every_n_frames, error))
         goto out;

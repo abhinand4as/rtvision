@@ -40,12 +40,13 @@ ifeq ($(TARGET_DEVICE),aarch64)
   PLATFORM_FLAGS += -DPLATFORM_TEGRA
 endif
 
-PKGS := gstreamer-1.0 gstreamer-video-1.0 x11 json-glib-1.0 gio-2.0 rdkafka
+PKGS := gstreamer-1.0 gstreamer-video-1.0 x11 json-glib-1.0 gio-2.0 rdkafka libsoup-3.0
 
 # Perceptra sources (strict warnings).
 APP_SRCS := main.c app_config.c probe.c perf.c log.c ds_compat.c event_model.c \
             event_serialize.c publisher.c publisher_stream.c publisher_kafka.c \
-            task_registry.c task_detect.c timestamps.c embeddings.c
+            task_registry.c task_detect.c timestamps.c embeddings.c metrics.c ota.c \
+            ops_server.c
 # DeepStream sources from the image (compiled with their own, relaxed flags).
 DS_C_SRCS := $(DS_APP_DIR)/deepstream_app.c $(DS_APP_DIR)/deepstream_app_config_parser.c \
              $(wildcard $(DS_COMMON_DIR)/src/*.c)
@@ -71,7 +72,7 @@ APP_OBJS := $(APP_SRCS:%.c=$(BUILD_DIR)/app/%.o)
 DS_OBJS := $(DS_C_SRCS:$(DS_ROOT)/%.c=$(BUILD_DIR)/ds/%.o) \
            $(DS_CXX_SRCS:$(DS_ROOT)/%.cpp=$(BUILD_DIR)/ds/%.o)
 
-.PHONY: all clean info check-ds test test-serialize test-publisher test-timestamps update-golden
+.PHONY: all clean info check-ds test test-serialize test-publisher test-timestamps test-metrics update-golden
 
 all: check-ds $(APP)
 
@@ -117,8 +118,16 @@ $(BUILD_DIR)/test_timestamps: $(TIMESTAMPS_TEST_SRCS) timestamps.h event_model.h
 test-timestamps: $(BUILD_DIR)/test_timestamps
 	env -u LD_PRELOAD ./$(BUILD_DIR)/test_timestamps
 
+$(BUILD_DIR)/test_metrics: tests/test_metrics.c metrics.c metrics.h Makefile
+	@mkdir -p $(dir $@)
+	$(CC) -std=gnu11 -O1 -g -Wall -Wextra -Werror $(SANITIZE) -I. -o $@ tests/test_metrics.c \
+	  metrics.c $(GLIB_FLAGS)
+
+test-metrics: $(BUILD_DIR)/test_metrics
+	env -u LD_PRELOAD ./$(BUILD_DIR)/test_metrics
+
 # All GPU-free unit tests of the app.
-test: test-serialize test-publisher test-timestamps
+test: test-serialize test-publisher test-timestamps test-metrics
 
 update-golden: $(BUILD_DIR)/test_serialize
 	env -u LD_PRELOAD ./$(BUILD_DIR)/test_serialize --write $(GOLDEN_EVENT)

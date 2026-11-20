@@ -15,6 +15,10 @@
  * storage. A source id may be reused after a stream is removed; counters are cumulative per id. */
 static guint64 frames_per_source[MAX_SOURCE_BINS];
 static guint64 objects_per_source[MAX_SOURCE_BINS];
+/* Metrics: sensor id per source (interned at the stream's first frame) and objects per class. */
+static const gchar *sensor_by_source[MAX_SOURCE_BINS];
+static guint64 objects_by_class[MAX_SOURCE_BINS][PERCEPTRA_PROBE_MAX_CLASSES];
+static const gchar *label_by_class[PERCEPTRA_PROBE_MAX_CLASSES];
 static guint64 frames_total;
 static guint64 objects_total;
 static guint64 events_built;
@@ -92,6 +96,67 @@ static void build_and_enqueue(AppCtx *app_ctx, NvDsFrameMeta *fm, gint64 ts_ms,
     perceptra_publisher_enqueue(config.publisher, ev); /* takes ownership, never blocks */
 }
 
+guint perceptra_probe_sources(PerceptraProbeSourceStat *out, guint max) {
+    guint n = 0;
+    for (guint i = 0; i < MAX_SOURCE_BINS && n < max; i++) {
+        const gchar *sid = __atomic_load_n(&sensor_by_source[i], __ATOMIC_ACQUIRE);
+        guint64 frames = __atomic_load_n(&frames_per_source[i], __ATOMIC_RELAXED);
+        if (sid == NULL || frames == 0)
+            continue;
+        out[n].source_id = i;
+        out[n].sensor_id = sid;
+        out[n].frames = frames;
+        n++;
+    }
+    return n;
+}
+
+void perceptra_probe_foreach_object_count(PerceptraProbeObjectFn fn, gpointer user_data) {
+    for (guint i = 0; i < MAX_SOURCE_BINS; i++) {
+        const gchar *sid = __atomic_load_n(&sensor_by_source[i], __ATOMIC_ACQUIRE);
+        if (sid == NULL)
+            continue;
+        for (guint c = 0; c < PERCEPTRA_PROBE_MAX_CLASSES; c++) {
+            guint64 n = __atomic_load_n(&objects_by_class[i][c], __ATOMIC_RELAXED);
+            const gchar *label = __atomic_load_n(&label_by_class[c], __ATOMIC_ACQUIRE);
+            if (n > 0)
+                fn(sid, label ? label : "unknown", n, user_data);
+        }
+    }
+}
+
+/* First frame of a stream: remember its sensor id; a different sensor on a reused source id
+ * starts new counter series. Interning happens once per stream, not per frame. */
+static void on_stream_start(NvDsFrameMeta *fm) {
+    const gchar *id = fm->sensorInfo_meta.sensor_id;
+    gchar fallback[32];
+    if (id == NULL || *id == '\0') {
+        g_snprintf(fallback, sizeof(fallback), "source-%u", fm->source_id);
+        id = fallback;
+    }
+    const gchar *interned = g_intern_string(id);
+    const gchar *old = __atomic_load_n(&sensor_by_source[fm->source_id], __ATOMIC_ACQUIRE);
+    if (old != interned) {
+        __atomic_store_n(&frames_per_source[fm->source_id], 0, __ATOMIC_RELAXED);
+        __atomic_store_n(&objects_per_source[fm->source_id], 0, __ATOMIC_RELAXED);
+        for (guint c = 0; c < PERCEPTRA_PROBE_MAX_CLASSES; c++)
+            __atomic_store_n(&objects_by_class[fm->source_id][c], 0, __ATOMIC_RELAXED);
+        __atomic_store_n(&sensor_by_source[fm->source_id], interned, __ATOMIC_RELEASE);
+    }
+}
+
+static void count_objects_by_class(NvDsFrameMeta *fm) {
+    for (NvDsMetaList *l = fm->obj_meta_list; l != NULL; l = l->next) {
+        NvDsObjectMeta *om = (NvDsObjectMeta *)l->data;
+        if (om->class_id < 0)
+            continue;
+        guint c = MIN((guint)om->class_id, PERCEPTRA_PROBE_MAX_CLASSES - 1u);
+        __atomic_add_fetch(&objects_by_class[fm->source_id][c], 1, __ATOMIC_RELAXED);
+        if (__atomic_load_n(&label_by_class[c], __ATOMIC_ACQUIRE) == NULL)
+            __atomic_store_n(&label_by_class[c], g_intern_string(om->obj_label), __ATOMIC_RELEASE);
+    }
+}
+
 void perceptra_probe(AppCtx *app_ctx, GstBuffer *buf, NvDsBatchMeta *batch_meta, guint index) {
     (void)buf;
     (void)index;
@@ -107,6 +172,9 @@ void perceptra_probe(AppCtx *app_ctx, GstBuffer *buf, NvDsBatchMeta *batch_meta,
         __atomic_add_fetch(&frames_total, 1, __ATOMIC_RELAXED);
         __atomic_add_fetch(&objects_total, num_objects, __ATOMIC_RELAXED);
         if (source_id < MAX_SOURCE_BINS) {
+            if (fm->frame_num == 0 || sensor_by_source[source_id] == NULL)
+                on_stream_start(fm);
+            count_objects_by_class(fm);
             guint64 frames = __atomic_add_fetch(&frames_per_source[source_id], 1, __ATOMIC_RELAXED);
             guint64 objects =
                 __atomic_add_fetch(&objects_per_source[source_id], num_objects, __ATOMIC_RELAXED);

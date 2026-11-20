@@ -47,6 +47,24 @@ guint64 perceptra_probe_frames_total(void);
 guint64 perceptra_probe_objects_total(void);
 guint64 perceptra_probe_events_built(void);
 
+/* Metrics views (thread-safe, lock-free reads). Class ids >= PERCEPTRA_PROBE_MAX_CLASSES are
+ * counted under the last slot. */
+#define PERCEPTRA_PROBE_MAX_CLASSES 256
+
+typedef struct {
+    guint source_id;
+    const gchar *sensor_id; /* interned */
+    guint64 frames;
+} PerceptraProbeSourceStat;
+
+/* Fills up to max sources that have processed frames; returns the count. */
+guint perceptra_probe_sources(PerceptraProbeSourceStat *out, guint max);
+
+/* Calls fn for every (source, label) pair with a non-zero object count. */
+typedef void (*PerceptraProbeObjectFn)(const gchar *sensor_id, const gchar *label, guint64 count,
+                                       gpointer user_data);
+void perceptra_probe_foreach_object_count(PerceptraProbeObjectFn fn, gpointer user_data);
+
 G_END_DECLS
 
 #endif /* PERCEPTRA_PROBE_H */

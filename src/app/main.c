@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights
- * reserved. SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Modifications Copyright (c) 2026 <PROJECT_OWNER>
  * Changes: derived from main() in RT-CV src/metropolis_perception_app.c; reduced to a single
@@ -47,6 +47,8 @@
 #include "embeddings.h"
 #include "event_model.h"
 #include "log.h"
+#include "ops_server.h"
+#include "ota.h"
 #include "perf.h"
 #include "probe.h"
 #include "publisher.h"
@@ -109,6 +111,12 @@ static gboolean on_signal(gpointer user_data) {
 }
 
 /* The deepstream-app bus callback sets appCtx->quit on EOS (all sources done) or fatal error. */
+static gboolean heartbeat(gpointer user_data) {
+    (void)user_data;
+    perceptra_ops_heartbeat(); /* /live */
+    return G_SOURCE_CONTINUE;
+}
+
 static gboolean check_pipeline_quit(gpointer user_data) {
     (void)user_data;
     if (app_ctx && app_ctx->quit) {
@@ -317,10 +325,33 @@ int main(int argc, char *argv[]) {
     };
     perceptra_probe_init(&probe_cfg);
 
+    /* Ops server first: /startup answers 503 while the pipeline (and TensorRT engine) builds. */
+    if (app_cfg.ops_port > 0) {
+        GError *ops_error = NULL;
+        if (!perceptra_ops_start(app_cfg.ops_port, &app_cfg, publisher, PERCEPTRA_VERSION,
+                                 &ops_error)) {
+            PLOG_ERROR("main", "event=ops_error port=%u error=\"%s\"", app_cfg.ops_port,
+                       ops_error->message);
+            g_clear_error(&ops_error);
+            exit_code = EXIT_USAGE_ERROR;
+            goto done;
+        }
+    }
+
     if (!create_pipeline(app_ctx, perceptra_probe, NULL, perceptra_perf_cb, NULL)) {
         PLOG_ERROR("main", "event=pipeline_error error=\"create_pipeline failed\"");
         exit_code = EXIT_RUNTIME_ERROR;
         goto done;
+    }
+
+    if (app_cfg.hot_swap_file) {
+        GError *ota_error = NULL;
+        if (!perceptra_ota_start(app_ctx, app_cfg.hot_swap_file, &ota_error)) {
+            PLOG_ERROR("main", "event=config_error error=\"hot swap: %s\"", ota_error->message);
+            g_clear_error(&ota_error);
+            exit_code = EXIT_USAGE_ERROR;
+            goto done;
+        }
     }
 
     GstElement *mux = app_ctx->pipeline.multi_src_bin.streammux;
@@ -331,6 +362,7 @@ int main(int argc, char *argv[]) {
     g_unix_signal_add(SIGINT, on_signal, GINT_TO_POINTER(SIGINT));
     g_unix_signal_add(SIGTERM, on_signal, GINT_TO_POINTER(SIGTERM));
     g_timeout_add(QUIT_POLL_INTERVAL_MS, check_pipeline_quit, NULL);
+    g_timeout_add_seconds(1, heartbeat, NULL);
 
     if (gst_element_set_state(app_ctx->pipeline.pipeline, GST_STATE_PAUSED) ==
         GST_STATE_CHANGE_FAILURE) {
@@ -348,6 +380,9 @@ int main(int argc, char *argv[]) {
               app_ctx->config.max_batch_size,
               app_ctx->config.http_ip ? app_ctx->config.http_ip : "-",
               app_ctx->config.http_port ? app_ctx->config.http_port : "-");
+    perceptra_ops_heartbeat();
+    perceptra_ops_set_started();
+    perceptra_ops_set_playing(TRUE);
 
     g_main_loop_run(main_loop);
 
@@ -359,8 +394,10 @@ done:
         exit_code = EXIT_RUNTIME_ERROR;
     if (app_ctx && app_ctx->pipeline.pipeline)
         arm_shutdown_watchdog(exit_code); /* bounds flush + teardown */
-    /* 1. no new events  2. flush the publisher  3. tear down the pipeline */
+    /* 0. not ready  1. no new events  2. flush the publisher  3. tear down the pipeline */
+    perceptra_ops_set_playing(FALSE);
     perceptra_probe_stop_events();
+    perceptra_ota_stop();
     if (publisher) {
         guint budget = app_cfg.publish.shutdown_flush_timeout_ms;
         if (opt_shutdown_timeout_s > 0) /* keep >= 2 s of the watchdog budget for teardown */
@@ -368,6 +405,7 @@ done:
         PLOG_INFO("main", "event=shutdown stage=flush_publisher timeout_ms=%u", budget);
         perceptra_publisher_shutdown(publisher, budget);
     }
+    perceptra_ops_stop(); /* before the publisher it reads is freed */
     if (app_ctx) {
         if (app_ctx->pipeline.pipeline) {
             PLOG_INFO("main", "event=shutdown stage=destroy_pipeline timeout_s=%d",

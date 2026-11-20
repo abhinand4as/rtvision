@@ -50,6 +50,9 @@ typedef struct {
     gchar *model_task;
     gchar *model_family;
     gchar *model_license;
+    gchar *model_precision;
+    gchar *hot_swap_file; /* NULL: hot swap disabled */
+    guint ops_port;       /* 0: ops server disabled */
     PerceptraPublishConfig publish;
     PerceptraTimestampSource timestamp_source;
     gboolean tracker_reid;
