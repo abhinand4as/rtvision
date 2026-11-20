@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/perceptra/service_config.schema.json",
+  "title": "Perceptra service configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["service", "publish"],
+  "properties": {
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_streams"],
+      "properties": {
+        "name": { "type": "string", "default": "perceptra" },
+        "gpu_id": { "type": "integer", "minimum": 0, "default": 0 },
+        "max_streams": { "type": "integer", "minimum": 1, "maximum": 256 },
+        "http_ip": { "type": "string", "default": "0.0.0.0" },
+        "rest_port": { "type": "integer", "minimum": 1, "maximum": 65535, "default": 9000 },
+        "streammux": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "width": { "type": "integer", "minimum": 16, "default": 1920 },
+            "height": { "type": "integer", "minimum": 16, "default": 1080 },
+            "batched_push_timeout_us": { "type": "integer", "minimum": 1000, "default": 33000 },
+            "live_source": { "type": "boolean", "default": true }
+          }
+        },
+        "sources": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "latency_ms": { "type": "integer", "minimum": 0, "default": 200 },
+            "force_tcp": { "type": "boolean", "default": true },
+            "rtsp_reconnect_interval_s": { "type": "integer", "minimum": 0, "default": 10 },
+            "rtsp_reconnect_attempts": { "type": "integer", "minimum": -1, "default": -1 },
+            "drop_on_latency": { "type": "boolean", "default": true }
+          }
+        }
+      }
+    },
+    "inference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "interval": { "type": "integer", "minimum": 0, "default": 0 },
+        "precision": { "enum": ["fp32", "fp16", "int8", null], "default": null }
+      }
+    },
+    "tracker": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile": { "enum": ["nvdcf_perf", "nvdcf_accuracy", "nvsort", "iou", "none"], "default": "nvdcf_perf" },
+        "width": { "type": "integer", "minimum": 32, "default": 960 },
+        "height": { "type": "integer", "minimum": 32, "default": 544 },
+        "reid": { "type": "boolean", "default": false }
+      }
+    },
+    "timestamps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "source": { "enum": ["ntp", "uri_utc", "system"], "default": "ntp" } }
+    },
+    "publish": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend"],
+      "properties": {
+        "backend": { "enum": ["kafka", "stdout", "file"] },
+        "interval_frames": { "type": "integer", "minimum": 1, "default": 30 },
+        "include_empty_frames": { "type": "boolean", "default": false },
+        "include_embeddings": { "type": "boolean", "default": false },
+        "queue": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_events": { "type": "integer", "minimum": 10, "default": 10000 },
+            "on_full": { "enum": ["drop_oldest", "drop_newest"], "default": "drop_oldest" },
+            "shutdown_flush_timeout_ms": { "type": "integer", "minimum": 0, "default": 5000 }
+          }
+        },
+        "kafka": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "brokers": { "type": "string", "minLength": 1 },
+            "topic": { "type": ["string", "null"] },
+            "key": { "enum": ["sensor_id", "none"], "default": "sensor_id" },
+            "properties": { "type": "object", "additionalProperties": { "type": "string" } }
+          }
+        },
+        "file": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "path": { "type": "string" } }
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "backend": { "const": "kafka" } } },
+          "then": { "required": ["kafka"], "properties": { "kafka": { "required": ["brokers"] } } } },
+        { "if": { "properties": { "backend": { "const": "file" } } },
+          "then": { "required": ["file"], "properties": { "file": { "required": ["path"] } } } }
+      ]
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "display": { "type": "boolean", "default": false },
+        "file": { "type": ["string", "null"], "default": null },
+        "rtsp": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": { "port": { "type": "integer" }, "udp_port": { "type": "integer" } }
+        }
+      }
+    },
+    "observability": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ops_port": { "type": "integer", "minimum": 1, "maximum": 65535, "default": 9464 },
+        "perf_interval_s": { "type": "integer", "minimum": 1, "default": 5 },
+        "log_level": { "enum": ["error", "warn", "info", "debug"], "default": "info" }
+      }
+    }
+  }
+}

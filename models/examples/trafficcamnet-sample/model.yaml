@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+# Uses the sample detector shipped INSIDE the DeepStream container (not part of this repo).
+# Intended for integration tests: no user-supplied weights needed.
+# The sample model is licensed by NVIDIA (NVIDIA AI Product License); it is referenced, never copied.
+schema_version: 1
+name: trafficcamnet-sample
+version: "ds-9.1-sample"
+task: detect
+license:
+  spdx: LicenseRef-NVIDIA-AI-Product-License
+  source: "DeepStream container: /opt/nvidia/deepstream/deepstream/samples/"
+  notes: "Test use inside the DeepStream container only."
+files:
+  onnx: null
+  labels: /opt/nvidia/deepstream/deepstream/samples/configs/deepstream-app/labels.txt   # implementer: verify path in image
+  nvinfer_config: /opt/nvidia/deepstream/deepstream/samples/configs/deepstream-app/config_infer_primary.txt
+input: { width: 960, height: 544 }        # informational when nvinfer_config is set; verify
+output: { family: builtin, num_classes: 4 }
+classes:
+  thresholds: { default: 0.4 }
+precision: fp16
+messaging:
+  topic: perceptra.it

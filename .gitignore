@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: Apache-2.0
+# --- never commit model weights / engines / media (see docs/LICENSING.md) ---
+*.pt
+*.pth
+*.onnx
+*.engine
+*.plan
+*.etlt
+*.trt
+*.safetensors
+*.bin
+*.npy
+*.mp4
+*.mkv
+*.avi
+*.h264
+*.h265
+*.jpg
+*.jpeg
+*.png
+!docs/**/*.png
+calib/**/images/
+
+# --- build outputs ---
+build/
+*.o
+*.so
+*.a
+src/app/perceptra
+src/parsers/tests/*_test
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# --- runtime / local ---
+deploy/compose/.env
+output/
+generated/
+*.log
+.DS_Store

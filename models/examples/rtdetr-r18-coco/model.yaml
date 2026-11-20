@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: Apache-2.0
+# Permissively licensed alternative: RT-DETR (lyuwenyu/RT-DETR, Apache-2.0 — verify for your exact checkpoint).
+# Export with the upstream repo's ONNX export script; check the output names with onnx_inspect and adjust `layers`.
+# NOTE: nvinfer feeds exactly one image input. If the upstream export adds a second input
+# (e.g. orig_target_sizes for its built-in post-processor), export WITHOUT the post-processor
+# so the model outputs raw boxes [Q,4] (cxcywh normalised) + logits [Q,C].
+schema_version: 1
+name: rtdetr-r18-coco
+version: "v2-r18"
+task: detect
+license:
+  spdx: Apache-2.0
+  source: https://github.com/lyuwenyu/RT-DETR
+files:
+  onnx: rtdetr_r18.onnx
+  labels: labels.txt
+input:
+  width: 640
+  height: 640
+  color: RGB
+  scale: 0.0039215697906911373
+  resize: stretch
+  dynamic_batch: true
+output:
+  family: detr
+  layers: [boxes, scores]       # verify names with onnx_inspect
+  box_format: cxcywh_norm
+  activation: sigmoid
+  has_background_class: false
+  num_classes: 80
+classes:
+  keep: []
+  thresholds: { default: 0.45 }
+  topk: 300
+precision: fp16

@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: Apache-2.0
+# Example service configuration. Copy to /opt/perceptra/config/perceptra.yaml.
+service:
+  name: perceptra
+  gpu_id: 0
+  max_streams: 4
+  http_ip: 0.0.0.0
+  rest_port: 9000
+  streammux: { width: 1920, height: 1080, batched_push_timeout_us: 33000, live_source: true }
+  sources: { latency_ms: 200, force_tcp: true, rtsp_reconnect_interval_s: 10, rtsp_reconnect_attempts: -1, drop_on_latency: true }
+
+inference:
+  interval: 0
+  precision: null
+
+tracker:
+  profile: nvdcf_perf
+  width: 960
+  height: 544
+  reid: false
+
+timestamps:
+  source: ntp
+
+publish:
+  backend: kafka
+  interval_frames: 30
+  include_empty_frames: false
+  include_embeddings: false
+  queue: { max_events: 10000, on_full: drop_oldest, shutdown_flush_timeout_ms: 5000 }
+  kafka:
+    brokers: kafka:9092
+    topic: null
+    key: sensor_id
+    properties:
+      linger.ms: "20"
+      compression.type: lz4
+
+outputs:
+  display: false
+  file: null
+  rtsp: null
+
+observability:
+  ops_port: 9464
+  perf_interval_s: 5
+  log_level: info

@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: Apache-2.0
+# People detection with Ultralytics YOLO26-s (NMS-free end-to-end head).
+# The WEIGHTS are AGPL-3.0 (Ultralytics). Read README.md in this folder before use.
+schema_version: 1
+name: yolo26s-people
+version: "2026.1"
+task: detect
+license:
+  spdx: AGPL-3.0-only
+  source: https://docs.ultralytics.com/models/yolo26/
+  notes: "Closed-source/commercial use requires an Ultralytics Enterprise licence."
+files:
+  onnx: yolo26s.onnx          # user-supplied, see README.md
+  labels: labels.txt
+  engine: null
+  int8_calibration: null
+input:
+  width: 640
+  height: 640
+  channels: 3
+  color: RGB
+  scale: 0.0039215697906911373
+  mean: [0.0, 0.0, 0.0]
+  resize: letterbox_center
+  dynamic_batch: true
+output:
+  family: yolo_e2e
+  layers: [output0]
+  box_format: xyxy_px
+  activation: none
+  num_classes: 80
+classes:
+  keep: [person]
+  thresholds: { default: 0.35, per_class: {} }
+  topk: 300
+precision: fp16
+messaging:
+  topic: people-raw

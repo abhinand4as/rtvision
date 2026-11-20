@@ -1,0 +1,36 @@
+Perceptra
+Copyright (c) 2026 <PROJECT_OWNER>
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+-------------------------------------------------------------------------------
+Portions derived from NVIDIA RT-CV
+-------------------------------------------------------------------------------
+Some source files are derived from the RT-CV microservice in
+https://github.com/NVIDIA-AI-Blueprints/video-search-and-summarization
+(path services/rtvi/rt-cv, commit cf2160322a67580d750bfd1a0ad60faf1234541b),
+Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+Licensed under the Apache License, Version 2.0.
+
+Derived files (each carries the original notice and a modification notice):
+  (to be filled in by the implementer, e.g.)
+  - src/app/main.c          <- src/metropolis_perception_app.c (main, lifecycle)
+  - src/app/probe.c         <- src/metropolis_perception_app.c (analytics probe)
+  - src/app/embeddings.c    <- src/metropolis_perception_app.c (ReID cache)
+  - src/app/ota.c           <- src/metropolis_perception_app.c (OTA model update)
+  - src/app/perf.c          <- src/metropolis_perception_app.c (perf callback)
+  - src/app/timestamps.c    <- src/perception_utc.c
+  - src/app/Makefile        <- src/Makefile
+
+-------------------------------------------------------------------------------
+Runtime platform
+-------------------------------------------------------------------------------
+Perceptra is built to run on NVIDIA DeepStream SDK, TensorRT and CUDA, which are
+NOT part of this repository and are licensed separately by NVIDIA. At build time
+the binary is compiled against DeepStream sample application sources provided
+inside the NVIDIA DeepStream container image; those sources are governed by their
+own licence headers and are not redistributed in this repository.
+
+"NVIDIA", "DeepStream", "TensorRT" and "Metropolis" are trademarks of NVIDIA
+Corporation. Ultralytics and YOLO are trademarks of their respective owners.
+This project is not affiliated with or endorsed by NVIDIA or Ultralytics.
