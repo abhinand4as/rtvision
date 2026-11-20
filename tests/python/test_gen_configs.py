@@ -258,6 +258,50 @@ def test_prepare_engine_cache(tmp_path: Path) -> None:
     assert (cache / "rtdetr_r18.onnx").read_bytes() == b"new model"
 
 
+def test_builtin_config_moves_engine_into_cache(tmp_path: Path) -> None:
+    """family: builtin with an onnx-file: nvinfer gets a copy of its config whose onnx/engine live
+    in the engine cache (the DeepStream samples dir is not writable for uid 1000)."""
+    sample = tmp_path / "ds" / "samples"
+    (sample / "models" / "Primary_Detector").mkdir(parents=True)
+    (sample / "configs" / "app").mkdir(parents=True)
+    pd = sample / "models" / "Primary_Detector"
+    (pd / "net.onnx").write_bytes(b"onnx")
+    (pd / "labels.txt").write_text("car\nbicycle\nperson\nroad_sign\n")
+    (pd / "net.onnx_b30_gpu0_fp16.engine").write_bytes(b"stale")  # never copied
+    cfg = sample / "configs" / "app" / "infer.txt"
+    cfg.write_text(
+        "[property]\n# comment=kept\ngpu-id=0\nonnx-file=../../models/Primary_Detector/net.onnx\n"
+        "model-engine-file=../../models/Primary_Detector/net.onnx_b30_gpu0_fp16.engine\n"
+        "labelfile-path=../../models/Primary_Detector/labels.txt\nbatch-size=30\n"
+        "network-mode=2\nnum-detected-classes=4\n[class-attrs-all]\ntopk=20\n"
+    )
+    mdir = tmp_path / "models" / "b"
+    mdir.mkdir(parents=True)
+    src = (EXAMPLES / "trafficcamnet-sample" / "model.yaml").read_text()
+    src = src.replace(
+        "/opt/nvidia/deepstream/deepstream/samples/configs/deepstream-app/config_infer_primary.txt",
+        str(cfg),
+    ).replace(
+        "/opt/nvidia/deepstream/deepstream/samples/models/Primary_Detector/labels.txt",
+        str(pd / "labels.txt"),
+    )
+    (mdir / "model.yaml").write_text(src)
+    ctx = ctx_for(mdir)
+    ctx.engine_dir = tmp_path / "engines"
+    cache = ctx.engine_dir / f"trafficcamnet-sample-trt{TRT}"
+
+    assert gen_configs.prepare_engine_cache(ctx) == ["labels.txt", "net.onnx"]
+    files = gen_configs.generate(ctx)
+    pgie = ini(files["pgie.ini"])["property"]
+    assert pgie["onnx-file"] == str(cache / "net.onnx")
+    assert pgie["model-engine-file"] == str(cache / "net.onnx_b4_gpu0_fp16.engine")
+    assert pgie["labelfile-path"] == str(pd / "labels.txt")
+    assert pgie["batch-size"] == "4" and pgie["network-mode"] == "2"
+    assert "# comment=kept" in files["pgie.ini"]
+    assert ini(files["ds-main.ini"])["primary-gie"]["config-file"] == str(ctx.out_dir / "pgie.ini")
+    assert "parser.ini" not in files
+
+
 def _fake_ds_root(tmp_path: Path, with_model: bool) -> Path:
     """A minimal DeepStream tree with an accuracy tracker profile referencing a ReID model."""
     root = tmp_path / "ds"
