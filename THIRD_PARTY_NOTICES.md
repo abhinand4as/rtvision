@@ -25,3 +25,9 @@ This file is **regenerated before each release** by `tools/ci/third_party_report
 † Licence id added to the allow-list by the project owner on 2026-11-20 (`docs/LICENSING.md` §6).
 
 Not distributed by this project: model weights, DeepStream sample models/streams, Ultralytics software.
+
+Used by the development/integration compose stack only (pulled from Docker Hub by the user, not part of the Perceptra image):
+
+| Component | Version | Licence | Source |
+|---|---|---|---|
+| Apache Kafka (`apache/kafka` image) | 4.3.2 | Apache-2.0 | https://kafka.apache.org |
