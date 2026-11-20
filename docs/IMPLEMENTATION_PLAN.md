@@ -124,11 +124,16 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 **Status:** done (2026-11-20). GPU: `docker logs -f … | consume_validate.py --stdin --min-events 5 --sensor-id m1-cam-0 --require-objects` → `PASS: 5 valid events (5 with objects)`; stdout carries only events; SIGTERM flushes the queue (`enqueued=11 published=11 dropped=0`) and exits 0. No GPU: `make -C src/app test` (serializer golden + publisher queue tests with a mock backend, ASan + UBSan) and pytest (golden event vs schema, `consume_validate`). **Pending M7:** the Kafka backend (`publisher_kafka.c`) compiles and is wired in, but is first exercised against a broker in the compose integration test. Timestamps are `system` until M5.
 
 ### M5 — Tracking, embeddings, timestamps
-- [ ] Tracker profiles in `gen_configs` (`nvdcf_perf`, `nvdcf_accuracy`, `nvsort`, `iou`, `none`), referencing the DeepStream sample tracker YAMLs **inside the container by path**. If a profile file is missing in the image, fail with a clear message.
-- [ ] Embeddings from tracker ReID (`NVDS_TRACKER_OBJ_REID_META`) with the optional cache (`reid_store_age`), encoded `base64-f32le`.
-- [ ] Timestamps: `ntp`, `uri_utc`, `system`; backward-NTP warning; RFC 3339 ms.
+- [x] Tracker profiles in `gen_configs` (`nvdcf_perf`, `nvdcf_accuracy`, `nvsort`, `iou`, `none`), referencing the DeepStream sample tracker YAMLs **inside the container by path**. If a profile file is missing in the image, fail with a clear message.
+- [x] Embeddings from tracker ReID (`NVDS_TRACKER_OBJ_REID_META`) with the optional cache (`reid_store_age`), encoded `base64-f32le`.
+- [x] Timestamps: `ntp`, `uri_utc`, `system`; backward-NTP warning; RFC 3339 ms.
 
 **Acceptance (GPU):** track ids stay stable for the same object across consecutive events in the sample video (manual check + log); timestamps are monotonic per stream.
+
+**Status:** done (2026-11-20), one item PENDING-REID-MODEL.
+- Track stability (`nvdcf_perf`, 44 events of the sample video, `tests/integration/track_stability.py`): every object tracked, persistence 0.65 between consecutive events (1 s apart), longest track 25 events; manual check: the longest track (a standing person) keeps its id across 12+ events and through a missed detection. `nvsort` and `iou` profiles run (all objects tracked); `none` → `track_id: null`.
+- Timestamps monotonic per stream (`consume_validate.py --check-monotonic`): file source (`system`), RTSP with RTCP via `tests/integration/rtsp_test_server.py` (`ntp`, 28/29 events), `uri_utc` (formatted file name).
+- **PENDING-REID-MODEL:** embeddings in events are implemented (`embeddings.c`, generated `tracker.yml` with `outputReidTensor: 1`) but not verified on the GPU, because NVIDIA's ReID network is not in the image and must be downloaded from NGC under NVIDIA's model licence (decision for the project owner). Verify with: mount the model at `/opt/nvidia/deepstream/deepstream/samples/models/Tracker/`, run with `PERCEPTRA__TRACKER__PROFILE=nvdcf_accuracy PERCEPTRA__TRACKER__REID=true PERCEPTRA__TRACKER__REID_STORE_AGE=30 PERCEPTRA__PUBLISH__INCLUDE_EMBEDDINGS=true`, and check `objects[].embedding.dim == 256`.
 
 ### M6 — Ops server, metrics, hot swap
 - [ ] `ops_server.c` (libsoup-3.0, own GMainContext thread), `/live` `/ready` `/startup` `/metrics`.

@@ -52,7 +52,10 @@ tracker:
   profile: nvdcf_perf             # nvdcf_perf | nvdcf_accuracy | nvsort | iou | none
   width: 960
   height: 544
-  reid: false                     # true requires an accuracy profile with ReID enabled
+  reid: false                     # true: nvdcf_accuracy profile with ReID tensor output (needs
+                                  # NVIDIA's ReID model mounted, see README "Tracking and ReID")
+  reid_store_age: 0               # frames a track's last ReID feature is reused when the tracker
+                                  # did not compute one on a sampled frame (0 = only fresh features)
 
 timestamps:
   source: ntp                     # ntp | uri_utc | system
@@ -152,6 +155,8 @@ For models that DeepStream already supports with its own parser (e.g. the in-con
 | `parser.ini` | model.output.*, model.classes.keep (ids), num_classes |
 | `app.ini` | publish.*, timestamps.*, model identity (name, version, task, family), observability.* |
 
+Timestamps mapping: `timestamps.source: ntp` sets `[streammux] attach-sys-ts-as-ntp=0` (NTP from RTCP sender reports); `uri_utc`/`system` keep the muxer default (1). Events record the source actually used: an `ntp` stream without sender reports yet (or a file source) and an unparsable `uri_utc` file name fall back to `system` per event.
+
 Resize mapping: `letterbox_center` → `maintain-aspect-ratio=1, symmetric-padding=1` (Ultralytics-style); `letterbox_topleft` → `maintain-aspect-ratio=1, symmetric-padding=0`; `stretch` → `maintain-aspect-ratio=0`.
 
 ### Licence gate
@@ -186,6 +191,10 @@ file_path=
 
 [timestamps]
 source=ntp
+
+[tracker]
+reid=false
+reid_store_age=0
 
 [ops]
 port=9464

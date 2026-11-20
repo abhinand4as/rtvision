@@ -5,6 +5,12 @@ All notable changes are documented here (format: Keep a Changelog; versioning: S
 
 ## [Unreleased]
 ### Added
+- M5 tracking, embeddings, timestamps: `timestamps.c` (ntp / uri_utc / system per stream with
+  per-event fallback, backward-NTP warning, URI UTC parser ported from RT-CV), `embeddings.c`
+  (tracker ReID features with a `reid_store_age` cache), generated `tracker.yml` for ReID tensor
+  output, clear startup error when the ReID model is missing, `tracker.reid_store_age` setting,
+  `attach-sys-ts-as-ntp` mapping; `make -C src/app test-timestamps`;
+  `tests/integration/track_stability.py`, `rtsp_test_server.py`, `consume_validate.py --check-monotonic`.
 - M4 events and publisher: `PerceptraFrameEvent`/`PerceptraObject` model, task registry (`detect`;
   `segment`/`pose` stubs), detect handler (bbox rescaled to source resolution, nullable track id and
   confidence), JSON serializer for `perceptra.detection.v1`, bounded publisher queue with

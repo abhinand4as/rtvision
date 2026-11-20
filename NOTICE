@@ -16,11 +16,13 @@ Derived files (each carries the original notice and a modification notice):
   - src/app/main.c          <- src/metropolis_perception_app.c (main, lifecycle)
   - src/app/perf.c          <- src/metropolis_perception_app.c (perf callback)
   - src/app/Makefile        <- src/Makefile
+  - src/app/timestamps.c    <- src/perception_utc.c (URI UTC parsing) and
+                               src/metropolis_perception_app.c (timestamp generation, NTP checks)
+  - src/app/embeddings.c    <- src/metropolis_perception_app.c (tracker ReID embedding cache)
   Planned (added to this list when ported):
-  - src/app/probe.c         <- src/metropolis_perception_app.c (analytics probe; M4/M5)
-  - src/app/embeddings.c    <- src/metropolis_perception_app.c (ReID cache; M5)
   - src/app/ota.c           <- src/metropolis_perception_app.c (OTA model update; M6)
-  - src/app/timestamps.c    <- src/perception_utc.c (M5)
+  Not derived (written from scratch, RT-CV used only as a reference for behaviour):
+  - src/app/probe.c, src/app/task_detect.c
 
 -------------------------------------------------------------------------------
 Runtime platform
