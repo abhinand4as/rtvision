@@ -10,8 +10,8 @@
 # The resulting image contains NVIDIA software under NVIDIA's terms; do not publish it
 # (docs/LICENSING.md §4).
 #
-# Entry point: perceptra-run (validates perceptra.yaml + model.yaml, generates the DeepStream
-# configs, execs the binary). Non-root user, HEALTHCHECK and entrypoint.sh follow in M7.
+# Entry point: entrypoint.sh -> perceptra-run (validates perceptra.yaml + model.yaml, generates
+# the DeepStream configs, execs the binary). Runs as the non-root user `perceptra` (uid 1000).
 
 ARG DS_IMAGE=nvcr.io/nvidia/deepstream:9.1-samples-multiarch
 
@@ -62,11 +62,36 @@ COPY schemas/ /opt/perceptra/schemas/
 COPY models/examples/ /opt/perceptra/models/
 COPY config/perceptra.example.yaml /opt/perceptra/config/perceptra.yaml
 
+COPY docker/entrypoint.sh /opt/perceptra/bin/entrypoint.sh
+
+# Non-root user (uid/gid 1000). The base image already has uid 1000 (`ubuntu`): rename it so
+# files written to volumes have a predictable owner. Only the engine cache, the output dir and
+# HOME (GStreamer registry cache) need to be writable.
+RUN set -eux; \
+    if getent passwd 1000 >/dev/null; then \
+        old="$(getent passwd 1000 | cut -d: -f1)"; \
+        usermod -l perceptra -d /home/perceptra -m "$old"; \
+        groupmod -n perceptra "$(getent group 1000 | cut -d: -f1)"; \
+    else \
+        groupadd -g 1000 perceptra; useradd -u 1000 -g 1000 -m -d /home/perceptra perceptra; \
+    fi; \
+    chown -R 1000:1000 /opt/perceptra/engines /opt/perceptra/output; \
+    chmod 0755 /opt/perceptra/bin/entrypoint.sh
+
 ENV PATH=/opt/perceptra/bin:${PATH} \
     PYTHONPATH=/opt/perceptra/python \
-    PERCEPTRA_SCHEMA_DIR=/opt/perceptra/schemas
+    PERCEPTRA_SCHEMA_DIR=/opt/perceptra/schemas \
+    HOME=/home/perceptra
 EXPOSE 9000 9464
 STOPSIGNAL SIGTERM
+USER 1000:1000
+WORKDIR /home/perceptra
+
+# /live answers 200 from the moment the binary starts (also while TensorRT builds the engine,
+# see docs/DEVIATIONS.md #26); /startup and /ready are for orchestrators that support them.
+HEALTHCHECK --interval=15s --timeout=3s --start-period=60s --retries=3 \
+    CMD curl -fsS -o /dev/null "http://127.0.0.1:${PERCEPTRA__OBSERVABILITY__OPS_PORT:-9464}/live" || exit 1
 
 # Select the model with PERCEPTRA_MODEL (name under /opt/perceptra/models or a path).
-ENTRYPOINT ["perceptra-run"]
+# `docker run IMAGE --dry-run` passes flags to perceptra-run; `docker run IMAGE bash` runs bash.
+ENTRYPOINT ["entrypoint.sh"]
