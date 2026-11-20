@@ -56,9 +56,9 @@ curl -sS -XPOST localhost:9000/api/v1/stream/remove -d @remove.json
 | GET | `/ready` | pipeline PLAYING and publisher healthy (Kafka connected, or backend ≠ kafka) | `{"status":"ready","streams":2}` |
 | GET | `/live` | main-loop heartbeat < 10 s old | `{"status":"alive"}` |
 | GET | `/metrics` | always | Prometheus text exposition (v0.0.4) |
-| GET | `/info` | always | `{"service":"perceptra","version":"0.1.0","model":{...},"max_streams":4,"schema":"perceptra.detection.v1"}` |
+| GET | `/info` | always | `{"service":"perceptra","version":"0.1.0","model":{"name","version","task","family","precision","license"},"max_streams":4,"schema":"perceptra.detection.v1"}` |
 
-Non-200 responses use 503 with `{"status":"<reason>"}`.
+Non-200 responses use 503 with `{"status":"<reason>"}` (e.g. `starting`, `pipeline not playing`, `publisher not connected`, `main loop stalled`). Other methods than GET/HEAD get 405, unknown paths 404. `/live` answers 200 while the service is still starting (pipeline creation and TensorRT engine builds run before the main loop); use `/startup` as the startup probe.
 
 Kubernetes example:
 ```yaml

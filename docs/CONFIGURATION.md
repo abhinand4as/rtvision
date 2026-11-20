@@ -47,6 +47,7 @@ service:
 inference:
   interval: 0                     # frames to skip between detector runs (tracker fills gaps)
   precision: null                 # override model.yaml precision (fp32|fp16|int8); null = use model's
+  hot_swap_file: null             # INI watched for live model swaps (see "Model hot swap"); null = off
 
 tracker:
   profile: nvdcf_perf             # nvdcf_perf | nvdcf_accuracy | nvsort | iou | none
@@ -159,6 +160,18 @@ Timestamps mapping: `timestamps.source: ntp` sets `[streammux] attach-sys-ts-as-
 
 Resize mapping: `letterbox_center` → `maintain-aspect-ratio=1, symmetric-padding=1` (Ultralytics-style); `letterbox_topleft` → `maintain-aspect-ratio=1, symmetric-padding=0`; `stretch` → `maintain-aspect-ratio=0`.
 
+### Model hot swap
+
+With `inference.hot_swap_file` set, `perceptra` watches that file (inotify on its directory, so editors, `mv` into place and Kubernetes ConfigMap updates all work). On change it applies the new model to the running nvinfer without stopping the pipeline:
+
+```ini
+[primary-gie]
+model-engine-file=/opt/perceptra/engines/<model>-trt<ver>/<onnx>_b4_gpu0_fp16.engine
+# or: config-file=/path/to/another/pgie.ini
+```
+
+The new engine must keep the task, output family, input size and batch size; anything else needs a restart. Results are logged (`comp=ota event=model_swapped result=ok|failed`) and counted in `perceptra_model_swaps_total{result}`.
+
 ### Licence gate
 
 If `license.spdx` is not one of `Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause, CC0-1.0, CC-BY-4.0`, `perceptra-run` prints a warning box and exits with code 3 unless `PERCEPTRA_ACCEPT_MODEL_LICENSE` equals that SPDX id. The accepted id is logged and exported as the metric label `license`.
@@ -174,6 +187,7 @@ version=2026.1
 task=detect
 family=yolo_e2e
 license=AGPL-3.0-only
+precision=fp16
 
 [publish]
 backend=kafka
@@ -191,6 +205,9 @@ file_path=
 
 [timestamps]
 source=ntp
+
+[inference]
+hot_swap_file=
 
 [tracker]
 reid=false

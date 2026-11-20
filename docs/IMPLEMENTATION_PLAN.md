@@ -136,11 +136,13 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 - **PENDING-REID-MODEL:** embeddings in events are implemented (`embeddings.c`, generated `tracker.yml` with `outputReidTensor: 1`) but not verified on the GPU, because NVIDIA's ReID network is not in the image and must be downloaded from NGC under NVIDIA's model licence (decision for the project owner). Verify with: mount the model at `/opt/nvidia/deepstream/deepstream/samples/models/Tracker/`, run with `PERCEPTRA__TRACKER__PROFILE=nvdcf_accuracy PERCEPTRA__TRACKER__REID=true PERCEPTRA__TRACKER__REID_STORE_AGE=30 PERCEPTRA__PUBLISH__INCLUDE_EMBEDDINGS=true`, and check `objects[].embedding.dim == 256`.
 
 ### M6 — Ops server, metrics, hot swap
-- [ ] `ops_server.c` (libsoup-3.0, own GMainContext thread), `/live` `/ready` `/startup` `/metrics`.
-- [ ] Metrics listed in ARCHITECTURE §8; `perf.c` feeds the FPS gauges.
-- [ ] `ota.c` hot swap (override file → set the nvinfer property → metric + log).
+- [x] `ops_server.c` (libsoup-3.0, own GMainContext thread), `/live` `/ready` `/startup` `/metrics`.
+- [x] Metrics listed in ARCHITECTURE §8; `perf.c` feeds the FPS gauges.
+- [x] `ota.c` hot swap (override file → set the nvinfer property → metric + log).
 
 **Acceptance (GPU):** `curl :9464/metrics` shows non-zero `perceptra_frames_processed_total`; a hot swap to a second engine works without dropping the stream.
+
+**Status:** done (2026-11-20). `/metrics` during a stream: `perceptra_frames_processed_total{sensor_id="m1-cam-0"} 347`, FPS 30.2, objects per label, event counters, `perceptra_model_info`; `/startup` 503→200, `/ready` `{"status":"ready","streams":1}`, `/info` as in docs/API.md; `perceptra_streams_active` 0 three seconds after `stream/remove`. Hot swap: synthetic model A (2 persons) → engine of model B (3 persons) via `inference.hot_swap_file` while streaming: objects per event 2→3 at frame 210 with no frame gap, swap 14 ms, `perceptra_model_swaps_total{result="ok"} 1`; an invalid engine path is rejected (`{result="failed"} 1`). No GPU: `make -C src/app test` adds `test-metrics` (Prometheus format).
 
 ### M7 — Container, compose, integration tests
 - [ ] Final Dockerfile (non-root uid 1000, `HEALTHCHECK` on `/live`), `entrypoint.sh` → `perceptra-run`.

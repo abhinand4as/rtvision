@@ -5,6 +5,11 @@ All notable changes are documented here (format: Keep a Changelog; versioning: S
 
 ## [Unreleased]
 ### Added
+- M6 ops server, metrics, hot swap: libsoup-3.0 ops server on its own thread (`/live`, `/ready`,
+  `/startup`, `/metrics`, `/info`), Prometheus metrics from ARCHITECTURE §8 (per-stream FPS, frames,
+  objects per label, event counters, queue depth, model info, swaps), model hot swap from
+  `inference.hot_swap_file` (derived from RT-CV OTA), `make -C src/app test-metrics`, synthetic model
+  variant `--variant b` for swap tests.
 - M5 tracking, embeddings, timestamps: `timestamps.c` (ntp / uri_utc / system per stream with
   per-event fallback, backward-NTP warning, URI UTC parser ported from RT-CV), `embeddings.c`
   (tracker ReID features with a `reid_store_age` cache), generated `tracker.yml` for ReID tensor
@@ -47,6 +52,10 @@ All notable changes are documented here (format: Keep a Changelog; versioning: S
   check (`tools/ci/check_forbidden.py`), ruff, clang-format, pytest.
 - `pyproject.toml` for the `perceptra-tools` package (`perceptra-run` entry point).
 - Specification package: architecture, implementation plan, configuration, parser contract, event schema v1, API, testing, licensing policy, roadmap.
+
+### Fixed
+- NVIDIA's original copyright line in RT-CV-derived files had been re-wrapped by clang-format;
+  restored, `ReflowComments: false`, and the SPDX check now enforces the verbatim line.
 
 ### Changed
 - Image entry point is `perceptra-run`; the hand-written M1 configs in `config/dev/` were removed.
