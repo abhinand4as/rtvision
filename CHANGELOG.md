@@ -5,6 +5,13 @@ All notable changes are documented here (format: Keep a Changelog; versioning: S
 
 ## [Unreleased]
 ### Added
+- M7 container, compose, integration tests: non-root image (uid 1000 `perceptra`), `HEALTHCHECK` on
+  `/live`, `docker/entrypoint.sh` (engine-cache writability check, passes flags to `perceptra-run`);
+  `deploy/compose/compose.yaml` (apache/kafka 4.3.2 KRaft + perceptra with GPU reservation, engine
+  cache volume, ports on 127.0.0.1 by default) and `.env.example`; `tests/integration/run_all.sh`
+  with `health.sh`, `add_stream.sh`, `remove_stream.sh`, `common.sh` (dry-run licence preflight,
+  fail-fast on container restarts, Kafka key/header checks, graceful-stop timing); engine caching for
+  `family: builtin` nvinfer configs; CI runs shellcheck and `docker compose config`.
 - M6 ops server, metrics, hot swap: libsoup-3.0 ops server on its own thread (`/live`, `/ready`,
   `/startup`, `/metrics`, `/info`), Prometheus metrics from ARCHITECTURE §8 (per-stream FPS, frames,
   objects per label, event counters, queue depth, model info, swaps), model hot swap from

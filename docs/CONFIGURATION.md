@@ -145,7 +145,7 @@ messaging:
 
 ### Escape hatch: existing nvinfer config (`family: builtin`)
 
-For models that DeepStream already supports with its own parser (e.g. the in-container TrafficCamNet sample used by the integration tests), set `files.nvinfer_config` to an absolute path and `output.family: builtin`. The generator then references that nvinfer config unchanged: it only overrides `batch-size` and `gpu-id` via `[primary-gie]` in `ds-main.ini`, and writes no `parser.ini`. `input`/`output` become informational. See `models/examples/trafficcamnet-sample/model.yaml`.
+For models that DeepStream already supports with its own parser (e.g. the in-container TrafficCamNet sample used by the integration tests), set `files.nvinfer_config` to an absolute path and `output.family: builtin`. The generator overrides `batch-size` and `gpu-id` via `[primary-gie]` in `ds-main.ini` and writes no `parser.ini`. If the config has an `onnx-file`, nvinfer gets a generated copy (`pgie.ini`) with absolute paths, `onnx-file` pointing at a copy of the model directory in the engine cache and `model-engine-file` at the engine it will save there, so the engine is built once and reused even though the DeepStream samples directory is read-only for the non-root user. All other keys are kept. Configs without an `onnx-file` are referenced unchanged. `input`/`output` become informational. See `models/examples/trafficcamnet-sample/model.yaml`.
 
 ### Generated artefacts (for reference; never hand-edited)
 

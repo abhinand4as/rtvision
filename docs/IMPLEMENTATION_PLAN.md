@@ -145,12 +145,14 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 **Status:** done (2026-11-20). `/metrics` during a stream: `perceptra_frames_processed_total{sensor_id="m1-cam-0"} 347`, FPS 30.2, objects per label, event counters, `perceptra_model_info`; `/startup` 503→200, `/ready` `{"status":"ready","streams":1}`, `/info` as in docs/API.md; `perceptra_streams_active` 0 three seconds after `stream/remove`. Hot swap: synthetic model A (2 persons) → engine of model B (3 persons) via `inference.hot_swap_file` while streaming: objects per event 2→3 at frame 210 with no frame gap, swap 14 ms, `perceptra_model_swaps_total{result="ok"} 1`; an invalid engine path is rejected (`{result="failed"} 1`). No GPU: `make -C src/app test` adds `test-metrics` (Prometheus format).
 
 ### M7 — Container, compose, integration tests
-- [ ] Final Dockerfile (non-root uid 1000, `HEALTHCHECK` on `/live`), `entrypoint.sh` → `perceptra-run`.
-- [ ] `deploy/compose/compose.yaml`: `apache/kafka` (KRaft, single node) + `perceptra` (GPU reservation, ports 9000/9464, volumes).
-- [ ] `tests/integration/run_all.sh`: deploy → health → add stream → consume ≥ `MIN_EVENTS` and validate each against the schema → remove stream → `docker compose stop` exits cleanly.
-- [ ] YOLO26 people profile verified end to end (requires the user to supply the ONNX; see `models/examples/yolo26s-people/README.md`).
+- [x] Final Dockerfile (non-root uid 1000, `HEALTHCHECK` on `/live`), `entrypoint.sh` → `perceptra-run`.
+- [x] `deploy/compose/compose.yaml`: `apache/kafka` (KRaft, single node) + `perceptra` (GPU reservation, ports 9000/9464, volumes).
+- [x] `tests/integration/run_all.sh`: deploy → health → add stream → consume ≥ `MIN_EVENTS` and validate each against the schema → remove stream → `docker compose stop` exits cleanly.
+- [ ] YOLO26 people profile verified end to end (requires the user to supply the ONNX; see `models/examples/yolo26s-people/README.md`). **PENDING-USER-MODEL**
 
 **Acceptance (GPU):** `tests/integration/run_all.sh` passes on a clean machine.
+
+**Status:** done (2026-11-20), one item PENDING-USER-MODEL. `PERCEPTRA_ACCEPT_MODEL_LICENSE=LicenseRef-NVIDIA-AI-Product-License tests/integration/run_all.sh` → `PASS: integration test` in 51 s: dry-run preflight, `/startup` 200 (12 s with engine build, 3 s from the engine cache), `/live`, `/ready`, stream add, 3 Kafka events valid against the schema (sensor `it-cam-0`, with objects, monotonic), Kafka key `it-cam-0` with `schema`/`content-type` headers, `perceptra_events_published_total` > 0, stream remove → `perceptra_streams_active` 0, `docker compose stop` → exit 0 in 8–9 s. This is the first run of the Kafka backend against a broker (apache/kafka 4.3.2, KRaft). The image runs as uid 1000 (`perceptra`) with a `/live` `HEALTHCHECK` (container reported `healthy`). Deviations #28–#30: the default test model's licence must be accepted explicitly; ports bind to 127.0.0.1 by default; builtin nvinfer configs get their engine cached. CI lint adds shellcheck and `docker compose config`. **PENDING-USER-MODEL:** YOLO26 needs an ONNX exported with Ultralytics (AGPL-3.0 tooling and weights) by the project owner; verify with `PERCEPTRA_MODEL=yolo26s-people PERCEPTRA_ACCEPT_MODEL_LICENSE=AGPL-3.0-only tests/integration/run_all.sh` after placing `yolo26s.onnx` in `models/examples/yolo26s-people/` (note: `IT_CAMERA_URL` sample video has people).
 
 ### M8 — Documentation and release hygiene
 - [ ] README quick start (build, run, add camera, see events), model onboarding guide, troubleshooting.
