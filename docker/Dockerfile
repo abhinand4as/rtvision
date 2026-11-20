@@ -46,12 +46,13 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 # Python tools (perceptra-run). The image has no venv/ensurepip, so the package and its
-# dependencies are installed into a private --target dir; system Python stays untouched.
+# dependencies are installed into a private --target dir; system Python stays untouched. The onnx
+# package's bundled backend test models are removed (unused; keeps model files out of the image).
 COPY pyproject.toml README.md /tmp/perceptra-tools/
 COPY tools/perceptra_tools/ /tmp/perceptra-tools/tools/perceptra_tools/
 RUN set -eux; \
     python3 -m pip install --no-cache-dir --target /opt/perceptra/python /tmp/perceptra-tools; \
-    rm -rf /tmp/perceptra-tools; \
+    rm -rf /tmp/perceptra-tools /opt/perceptra/python/onnx/backend/test/data; \
     mkdir -p /opt/perceptra/bin /opt/perceptra/engines /opt/perceptra/output; \
     printf '#!/bin/sh\nexec python3 -m perceptra_tools.run "$@"\n' > /opt/perceptra/bin/perceptra-run; \
     chmod 0755 /opt/perceptra/bin/perceptra-run

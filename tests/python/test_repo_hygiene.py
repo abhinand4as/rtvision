@@ -79,3 +79,11 @@ def test_forbidden_rules(tmp_path: Path, name: str, ok: bool) -> None:
     target.write_bytes(b"x")
     res = _run("check_forbidden.py", "--root", str(tmp_path))
     assert (res.returncode == 0) is ok, res.stdout
+
+
+def test_dockerignore_excludes_weights_in_subdirectories() -> None:
+    """.dockerignore patterns are rooted at the build context (unlike .gitignore): `*.onnx` alone
+    would let models/examples/*/x.onnx into the image."""
+    lines = {line.strip() for line in (ROOT / ".dockerignore").read_text().splitlines()}
+    for ext in ("pt", "pth", "onnx", "engine", "plan", "etlt", "safetensors", "mp4"):
+        assert f"**/*.{ext}" in lines, f".dockerignore must contain **/*.{ext}"
