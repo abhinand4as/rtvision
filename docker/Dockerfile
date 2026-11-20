@@ -5,7 +5,7 @@
 # Two-stage Perceptra image on public NVIDIA DeepStream.
 #   build:   compiles the `perceptra` binary against the deepstream-app/apps-common sources and
 #            headers that ship INSIDE the base image (never vendored, docs/LICENSING.md §3).
-#   runtime: DeepStream runtime + the binary + configs.
+#   runtime: DeepStream runtime + the binary + libperceptra_parsers.so + configs.
 # Build (from the repo root):  docker build -f docker/Dockerfile -t perceptra:local .
 # The resulting image contains NVIDIA software under NVIDIA's terms; do not publish it
 # (docs/LICENSING.md §4).
@@ -30,6 +30,9 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
+COPY src/parsers/ src/parsers/
+# Parser library + its unit and adapter tests (CPU only, no GPU needed at build time).
+RUN make -C src/parsers clean && make -C src/parsers test && make -C src/parsers all
 COPY src/app/ src/app/
 RUN make -C src/app -j"$(nproc)" && make -C src/app info
 
@@ -42,6 +45,7 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /src/src/app/perceptra /opt/perceptra/bin/perceptra
+COPY --from=build /src/src/parsers/libperceptra_parsers.so /opt/perceptra/lib/libperceptra_parsers.so
 COPY config/dev/ /opt/perceptra/config/dev/
 
 ENV PATH=/opt/perceptra/bin:${PATH}
