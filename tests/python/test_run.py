@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 
 import pytest
-from conftest import EXAMPLE_CONFIG, EXAMPLES
+from conftest import EXAMPLE_CONFIG, EXAMPLES, FIXTURE_MODELS
 from perceptra_tools import run
 from test_onnx_inspect import CASES, make_onnx
 
@@ -20,6 +20,8 @@ BASE = [
     "--dry-run",
     "--no-check-files",
 ]
+# A test-only model declaring AGPL-3.0-only (no shipped example uses a non-permissive licence).
+AGPL_MODEL = ["--models-dir", str(FIXTURE_MODELS), "--model", "yolo26s-people"]
 
 
 def run_main(tmp_path: Path, extra: list[str], env: dict | None = None) -> int:
@@ -40,20 +42,20 @@ def test_permissive_model_runs(tmp_path: Path) -> None:
 
 
 def test_license_gate_exit_3(tmp_path: Path, capsys) -> None:
-    assert run_main(tmp_path, ["--model", "yolo26s-people"]) == run.EXIT_LICENSE
+    assert run_main(tmp_path, [*AGPL_MODEL]) == run.EXIT_LICENSE
     err = capsys.readouterr().err
     assert "MODEL LICENCE: AGPL-3.0-only" in err
     assert "PERCEPTRA_ACCEPT_MODEL_LICENSE=AGPL-3.0-only" in err
     assert not (tmp_path / "gen").exists()  # nothing generated
     # A different accepted id does not unlock it.
     assert (
-        run_main(tmp_path, ["--model", "yolo26s-people"], {"PERCEPTRA_ACCEPT_MODEL_LICENSE": "MIT"})
+        run_main(tmp_path, [*AGPL_MODEL], {"PERCEPTRA_ACCEPT_MODEL_LICENSE": "MIT"})
         == run.EXIT_LICENSE
     )
     assert (
         run_main(
             tmp_path,
-            ["--model", "yolo26s-people"],
+            [*AGPL_MODEL],
             {"PERCEPTRA_ACCEPT_MODEL_LICENSE": "AGPL-3.0-only"},
         )
         == 0

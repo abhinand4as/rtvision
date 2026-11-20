@@ -10,6 +10,8 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 EXAMPLES = REPO / "models" / "examples"
+# Models used only by tests (e.g. a non-permissive licence for the licence gate).
+FIXTURE_MODELS = REPO / "tests" / "python" / "fixtures" / "models"
 EXAMPLE_CONFIG = REPO / "config" / "perceptra.example.yaml"
 GOLDEN = REPO / "tests" / "golden"
 

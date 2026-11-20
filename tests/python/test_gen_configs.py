@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from conftest import EXAMPLE_CONFIG, EXAMPLES, GOLDEN, REPO, write_model
+from conftest import EXAMPLE_CONFIG, EXAMPLES, FIXTURE_MODELS, GOLDEN, REPO, write_model
 from perceptra_tools import gen_configs
 from perceptra_tools.schemas import ConfigError, load_model_config, load_service_config
 
@@ -90,7 +90,7 @@ def test_builtin_overrides_batch_and_gpu_only() -> None:
 
 def test_keep_to_filter_out_class_ids_and_allow_list(tmp_path: Path) -> None:
     labels = ["person", "car", "dog", "cat"]
-    src = (EXAMPLES / "yolo26s-people" / "model.yaml").read_text()
+    src = (FIXTURE_MODELS / "yolo26s-people" / "model.yaml").read_text()
     src = src.replace("keep: [person]", "keep: [dog, person]").replace(
         "num_classes: 80", "num_classes: 4"
     )
@@ -123,7 +123,7 @@ def test_resize_mapping(tmp_path: Path, resize: str, maintain: str, symmetric: s
 
 
 def test_precision_override_and_cluster_mode(tmp_path: Path) -> None:
-    src = (EXAMPLES / "yolo26s-people" / "model.yaml").read_text()
+    src = (FIXTURE_MODELS / "yolo26s-people" / "model.yaml").read_text()
     src = src.replace("family: yolo_e2e", "family: yolo_raw").replace(
         "box_format: xyxy_px", "box_format: cxcywh_px"
     )
@@ -132,7 +132,7 @@ def test_precision_override_and_cluster_mode(tmp_path: Path) -> None:
         "thresholds: { default: 0.35, per_class: { person: 0.5 } }",
     )
     p = write_model(
-        tmp_path, src, (EXAMPLES / "yolo26s-people" / "labels.txt").read_text().splitlines()
+        tmp_path, src, (FIXTURE_MODELS / "yolo26s-people" / "labels.txt").read_text().splitlines()
     )
     files = gen_configs.generate(ctx_for(p.parent, env={"PERCEPTRA__INFERENCE__PRECISION": "fp32"}))
     pg = ini(files["pgie.ini"])
@@ -183,14 +183,14 @@ def test_force_tcp_and_outputs() -> None:
 
 
 def test_labels_count_and_unknown_keep_label(tmp_path: Path) -> None:
-    src = (EXAMPLES / "yolo26s-people" / "model.yaml").read_text()
+    src = (FIXTURE_MODELS / "yolo26s-people" / "model.yaml").read_text()
     p = write_model(tmp_path, src, ["person", "car"])
     with pytest.raises(ConfigError, match="num_classes: 80 but the labels file has 2 lines"):
         gen_configs.generate(ctx_for(p.parent))
     p = write_model(
         tmp_path,
         src.replace("keep: [person]", "keep: [persn]"),
-        (EXAMPLES / "yolo26s-people" / "labels.txt").read_text().splitlines(),
+        (FIXTURE_MODELS / "yolo26s-people" / "labels.txt").read_text().splitlines(),
     )
     with pytest.raises(ConfigError, match=r"classes\.keep\[0\]: label 'persn'"):
         gen_configs.generate(ctx_for(p.parent))

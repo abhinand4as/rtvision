@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
-# People detection with Ultralytics YOLO26-s (NMS-free end-to-end head).
-# The WEIGHTS are AGPL-3.0 (Ultralytics). Read README.md in this folder before use.
+# TEST FIXTURE (not a shipped example): a yolo_e2e model declaring AGPL-3.0-only, used by the
+# parser-family and licence-gate tests. No weights; Perceptra ships no AGPL model.
 schema_version: 1
 name: yolo26s-people
 version: "2026.1"
