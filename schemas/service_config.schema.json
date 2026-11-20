@@ -55,7 +55,8 @@
         "profile": { "enum": ["nvdcf_perf", "nvdcf_accuracy", "nvsort", "iou", "none"], "default": "nvdcf_perf" },
         "width": { "type": "integer", "minimum": 32, "default": 960 },
         "height": { "type": "integer", "minimum": 32, "default": 544 },
-        "reid": { "type": "boolean", "default": false }
+        "reid": { "type": "boolean", "default": false },
+        "reid_store_age": { "type": "integer", "minimum": 0, "maximum": 10000, "default": 0 }
       }
     },
     "timestamps": {

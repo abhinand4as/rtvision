@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 
 import pytest
+import yaml
 from conftest import EXAMPLE_CONFIG, EXAMPLES, GOLDEN, REPO, write_model
 from perceptra_tools import gen_configs
 from perceptra_tools.schemas import ConfigError, load_model_config, load_service_config
@@ -255,3 +256,82 @@ def test_prepare_engine_cache(tmp_path: Path) -> None:
     assert gen_configs.prepare_engine_cache(ctx) == ["rtdetr_r18.onnx"]
     assert not engine.exists()
     assert (cache / "rtdetr_r18.onnx").read_bytes() == b"new model"
+
+
+def _fake_ds_root(tmp_path: Path, with_model: bool) -> Path:
+    """A minimal DeepStream tree with an accuracy tracker profile referencing a ReID model."""
+    root = tmp_path / "ds"
+    cfg = root / "samples" / "configs" / "deepstream-app"
+    cfg.mkdir(parents=True)
+    model = root / "samples" / "models" / "Tracker" / "resnet50_market1501.etlt"
+    for name in gen_configs.TRACKER_PROFILES.values():
+        (cfg / name).write_text("BaseConfig: {minDetectorConfidence: 0}\n")
+    (cfg / "config_tracker_NvDCF_accuracy.yml").write_text(
+        "# NVIDIA licence header\n%YAML:1.0\n"
+        "BaseConfig:\n  minDetectorConfidence: 0.1\n"
+        "ReID:\n  reidType: 2\n  reidFeatureSize: 256\n"
+        f'  tltEncodedModel: "{model}"\n'
+        f'  modelEngineFile: "{model}_b100_gpu0_fp16.engine"\n'
+    )
+    if with_model:
+        model.parent.mkdir(parents=True)
+        model.write_bytes(b"x")
+    return root
+
+
+def test_timestamps_source_sets_attach_sys_ts() -> None:
+    for source, expected in (("ntp", "0"), ("uri_utc", "1"), ("system", "1")):
+        files = gen_configs.generate(
+            ctx_for(EXAMPLES / "rtdetr-r18-coco", env={"PERCEPTRA__TIMESTAMPS__SOURCE": source})
+        )
+        assert ini(files["ds-main.ini"])["streammux"]["attach-sys-ts-as-ntp"] == expected
+        assert ini(files["app.ini"])["timestamps"]["source"] == source
+
+
+def test_reid_tracker_config_generated(tmp_path: Path) -> None:
+    env = {
+        "PERCEPTRA__TRACKER__PROFILE": "nvdcf_accuracy",
+        "PERCEPTRA__TRACKER__REID": "true",
+        "PERCEPTRA__TRACKER__REID_STORE_AGE": "30",
+        "PERCEPTRA__PUBLISH__INCLUDE_EMBEDDINGS": "true",
+    }
+    ctx = ctx_for(EXAMPLES / "rtdetr-r18-coco", env=env, check_files=False)
+    ctx.ds_root = str(_fake_ds_root(tmp_path, with_model=True))
+    files = gen_configs.generate(ctx)
+    assert "\n%YAML:1.0\n" in files["tracker.yml"]  # directive kept for the tracker library
+    trk = yaml.safe_load(files["tracker.yml"].replace("%YAML:1.0", ""))
+    assert trk["ReID"]["outputReidTensor"] == 1
+    assert trk["ReID"]["reidType"] == 2 and trk["BaseConfig"]["minDetectorConfidence"] == 0.1
+    assert trk["ReID"]["modelEngineFile"] == str(
+        ENGINE_DIR / f"tracker-reid-trt{TRT}" / "resnet50_market1501.etlt_b100_gpu0_fp16.engine"
+    )
+    ds = ini(files["ds-main.ini"])["tracker"]
+    assert ds["ll-config-file"] == str(OUT_DIR / "tracker.yml")
+    assert ds["user-meta-pool-size"] == str(gen_configs.REID_USER_META_POOL_SIZE)
+    app = ini(files["app.ini"])
+    assert app["tracker"]["reid"] == "true" and app["tracker"]["reid_store_age"] == "30"
+    assert app["publish"]["include_embeddings"] == "true"
+
+
+def test_accuracy_profile_without_reid_model(tmp_path: Path) -> None:
+    env = {"PERCEPTRA__TRACKER__PROFILE": "nvdcf_accuracy"}
+    ctx = ctx_for(EXAMPLES / "rtdetr-r18-coco", env=env, check_files=True)
+    ctx.ds_root = str(_fake_ds_root(tmp_path, with_model=False))
+    with pytest.raises(ConfigError, match="needs the ReID model .*not shipped"):
+        gen_configs.generate(ctx)
+    # with the model present, the plain accuracy profile is referenced unchanged
+    ctx.ds_root = str(_fake_ds_root(tmp_path / "ok", with_model=True))
+    files = gen_configs.generate(ctx)
+    assert "tracker.yml" not in files
+    assert ini(files["ds-main.ini"])["tracker"]["ll-config-file"].endswith(
+        "config_tracker_NvDCF_accuracy.yml"
+    )
+
+
+def test_embeddings_require_reid() -> None:
+    with pytest.raises(ConfigError, match="include_embeddings: true requires tracker.reid"):
+        gen_configs.generate(
+            ctx_for(
+                EXAMPLES / "rtdetr-r18-coco", env={"PERCEPTRA__PUBLISH__INCLUDE_EMBEDDINGS": "true"}
+            )
+        )

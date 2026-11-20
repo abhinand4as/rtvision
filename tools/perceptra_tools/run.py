@@ -218,6 +218,8 @@ def main(argv: list[str] | None = None, env: Mapping[str, str] | None = None) ->
         for path in written:
             log("info", f"event=generated file={path}")
         if check_files:
+            if service["tracker"]["reid"]:
+                gen_configs.reid_engine_dir(ctx).mkdir(parents=True, exist_ok=True)
             for name in gen_configs.prepare_engine_cache(ctx):
                 log(
                     "info",

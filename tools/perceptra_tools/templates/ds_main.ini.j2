@@ -53,6 +53,8 @@ enable-padding=0
 nvbuf-memory-type=0
 drop-pipeline-eos=1
 live-source={{ b(mux.live_source) }}
+# 0: ntp_timestamp from RTCP sender reports (timestamps.source=ntp); 1: muxer system clock.
+attach-sys-ts-as-ntp={{ 0 if ts_source == "ntp" else 1 }}
 
 [primary-gie]
 enable=1
@@ -71,6 +73,9 @@ tracker-height={{ tracker.height }}
 gpu-id={{ s.gpu_id }}
 ll-lib-file={{ ds_root }}/lib/libnvds_nvmultiobjecttracker.so
 ll-config-file={{ tracker_file }}
+{% if tracker.reid %}
+user-meta-pool-size={{ reid_meta_pool }}
+{% endif %}
 {% else %}
 enable=0
 {% endif %}

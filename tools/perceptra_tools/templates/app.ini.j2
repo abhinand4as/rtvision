@@ -31,6 +31,10 @@ file_path={{ file_path if pub.backend == "file" else "" }}
 [timestamps]
 source={{ ts.source }}
 
+[tracker]
+reid={{ b(tracker.reid) }}
+reid_store_age={{ tracker.reid_store_age }}
+
 [ops]
 port={{ obs.ops_port }}
 perf_interval_s={{ obs.perf_interval_s }}
