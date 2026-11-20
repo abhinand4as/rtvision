@@ -40,6 +40,20 @@ def test_no_forbidden_files() -> None:
         ("a.md", "# no header\n", False),
         ("a.xyz", "SPDX-License-Identifier: Apache-2.0\n", False),  # unknown type
         ("labels.txt", "person\n", True),  # exempt
+        (
+            "d.c",
+            "/*\n * SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & "
+            "AFFILIATES. All rights reserved.\n * SPDX-License-Identifier: Apache-2.0\n"
+            " * Modifications Copyright (c) 2026 X\n * Changes: ported\n */\n",
+            True,
+        ),
+        (
+            "d.c",
+            "/*\n * SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & "
+            "AFFILIATES. All rights\n * reserved. SPDX-License-Identifier: Apache-2.0\n"
+            " * Modifications Copyright (c) 2026 X\n * Changes: ported\n */\n",
+            False,  # re-wrapped NVIDIA notice
+        ),
     ],
 )
 def test_spdx_rules(tmp_path: Path, name: str, content: str, ok: bool) -> None:

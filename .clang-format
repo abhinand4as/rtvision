@@ -5,3 +5,4 @@ ColumnLimit: 100
 PointerAlignment: Right
 AllowShortFunctionsOnASingleLine: Empty
 SortIncludes: false
+ReflowComments: false

@@ -30,6 +30,12 @@ from pathlib import Path
 HEADER_LINES = 20
 SPDX_RE = re.compile(r"SPDX-License-Identifier:\s*Apache-2\.0\b")
 COPYRIGHT_RE = re.compile(r"Copyright \(c\) \d{4}")
+# Files derived from NVIDIA RT-CV must keep NVIDIA's original notice line verbatim
+# (Apache-2.0 §4(c)); formatters must not re-wrap it.
+NVIDIA_NOTICE = (
+    "SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. "
+    "All rights reserved."
+)
 
 CODE_SUFFIXES = {".c", ".h", ".cc", ".cpp", ".hpp", ".py", ".sh", ".j2"}
 CODE_NAMES = {"Makefile", "Dockerfile"}
@@ -97,6 +103,11 @@ def check_file(root: Path, path: str) -> str | None:
         return "missing 'SPDX-License-Identifier: Apache-2.0'"
     if kind == "code" and not COPYRIGHT_RE.search(head):
         return "missing 'Copyright (c) <YEAR> <OWNER>' line"
+    if kind == "code" and "NVIDIA CORPORATION" in head and "Modifications Copyright" in head:
+        if not any(line.rstrip().endswith(NVIDIA_NOTICE) for line in head.splitlines()):
+            return "derived file: NVIDIA's original copyright line is not verbatim"
+        if not re.search(r"Changes:", head):
+            return "derived file: missing 'Changes:' summary (Apache-2.0 §4(b))"
     return None
 
 
