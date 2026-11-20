@@ -8,6 +8,7 @@
 .pytest_cache
 .ruff_cache
 build
+**/build
 output
 generated
 deploy/compose/.env
