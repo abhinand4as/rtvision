@@ -40,6 +40,8 @@ The payload format is DeepStream's (`Gst-nvmultiurisrcbin` documentation). Perce
 ### Remove a stream
 `POST /api/v1/stream/remove` — same envelope with `"change": "camera_remove"` and the `camera_id` (and `camera_url`) of the stream to remove.
 
+A file source is removed by DeepStream itself when it reaches end-of-file; removing it again (or any stream that is not added) answers HTTP 500 `STREAM_REMOVE_FAIL, No record found`.
+
 ### Examples
 ```bash
 curl -sS -XPOST localhost:9000/api/v1/stream/add -d @add.json

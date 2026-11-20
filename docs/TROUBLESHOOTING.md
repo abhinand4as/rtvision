@@ -71,8 +71,10 @@ track and Perceptra only decodes video.
 **`GStreamer-WARNING: Failed to load plugin …` at startup.** Harmless: the base image ships
 optional GStreamer plugins whose dependencies are not installed. They are not used.
 
-**A file stream stops after a while.** File sources end at end-of-file; they do not loop. The
-stream stays listed until you remove it.
+**A file stream stops after a while.** File sources end at end-of-file; they do not loop.
+DeepStream then removes the stream by itself (`new stream removed [<id>:<camera_id>]` in the log,
+`perceptra_streams_active` drops), and a later `stream/remove` for it answers HTTP 500
+`STREAM_REMOVE_FAIL, No record found`, which is harmless.
 
 ## Events
 

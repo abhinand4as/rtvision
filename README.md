@@ -71,7 +71,9 @@ Step 5 prints one line per event, e.g.
 For a per-camera people count, run the people model (`PERCEPTRA_MODEL=rfdetr-s-people` before
 step 2) and pipe topic `people-raw` into `python3 examples/consumer/occupancy.py`.
 
-The sample video is about 50 seconds long; the stream ends there (it does not loop).
+The sample video is about 50 seconds long and does not loop. At its end DeepStream removes the
+stream by itself, so the remove in step 6 then answers `STREAM_REMOVE_FAIL, No record found`,
+which is harmless. RTSP cameras stay until you remove them.
 
 ## Configuration
 
