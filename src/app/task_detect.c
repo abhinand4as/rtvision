@@ -11,9 +11,11 @@
  * - track_id: object_id, or null when UNTRACKED_OBJECT_ID (no tracker / not yet tracked).
  * - confidence: detector confidence; negative values (e.g. tracker-only frames) -> null.
  * - label: obj_label (interned once per distinct label).
+ * - embedding: tracker ReID feature when publish.include_embeddings (embeddings.c).
  */
 #include "task_registry.h"
 
+#include "embeddings.h"
 #include "gstnvdsmeta.h"
 
 static gboolean detect_init(GError **error) {
@@ -48,6 +50,7 @@ static guint detect_fill(AppCtx *app_ctx, NvDsFrameMeta *fm, PerceptraFrameEvent
         o->top = om->rect_params.top * sy;
         o->width = om->rect_params.width * sx;
         o->height = om->rect_params.height * sy;
+        o->embedding = perceptra_embeddings_for_object(fm, om); /* NULL unless enabled */
     }
     return overflow;
 }

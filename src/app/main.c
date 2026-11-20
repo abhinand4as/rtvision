@@ -44,12 +44,14 @@
 #include "deepstream_app.h"
 
 #include "app_config.h"
+#include "embeddings.h"
 #include "event_model.h"
 #include "log.h"
 #include "perf.h"
 #include "probe.h"
 #include "publisher.h"
 #include "task_registry.h"
+#include "timestamps.h"
 
 #define PERCEPTRA_VERSION "0.1.0-dev"
 #define EXIT_RUNTIME_ERROR 1
@@ -282,9 +284,11 @@ int main(int argc, char *argv[]) {
         exit_code = EXIT_USAGE_ERROR;
         goto done;
     }
-    if (app_cfg.timestamp_source != PERCEPTRA_TS_SYSTEM)
-        PLOG_WARN("main", "event=timestamps_fallback configured=%s used=system reason=\"M5\"",
-                  perceptra_timestamp_source_name(app_cfg.timestamp_source));
+    perceptra_timestamps_init(app_cfg.timestamp_source);
+    perceptra_embeddings_init(app_cfg.publish.include_embeddings, app_cfg.tracker_reid_store_age);
+    PLOG_INFO("main", "event=events_config timestamps=%s embeddings=%d reid_store_age=%u",
+              perceptra_timestamp_source_name(app_cfg.timestamp_source),
+              app_cfg.publish.include_embeddings, app_cfg.tracker_reid_store_age);
 
     const PerceptraEventContext event_ctx = {
         .service = app_cfg.service_name,
@@ -375,6 +379,7 @@ done:
         app_ctx = NULL;
     }
     g_clear_pointer(&publisher, perceptra_publisher_free);
+    perceptra_embeddings_shutdown();
     if (main_loop)
         g_main_loop_unref(main_loop);
     perceptra_app_config_clear(&app_cfg);

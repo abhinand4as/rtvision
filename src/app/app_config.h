@@ -52,6 +52,8 @@ typedef struct {
     gchar *model_license;
     PerceptraPublishConfig publish;
     PerceptraTimestampSource timestamp_source;
+    gboolean tracker_reid;
+    guint tracker_reid_store_age;
     PerceptraLogLevel log_level;
     guint probe_log_every_n_frames;
 } PerceptraAppConfig;

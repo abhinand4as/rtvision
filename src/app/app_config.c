@@ -196,6 +196,15 @@ gboolean perceptra_app_config_load(const char *path, PerceptraAppConfig *cfg, GE
             goto out;
     }
 
+    if (!take_bool(kf, "tracker", "reid", &cfg->tracker_reid, error) ||
+        !take_uint(kf, "tracker", "reid_store_age", 0, &cfg->tracker_reid_store_age, error))
+        goto out;
+    if (p->include_embeddings && !cfg->tracker_reid) {
+        g_set_error(error, G_KEY_FILE_ERROR, G_KEY_FILE_ERROR_INVALID_VALUE,
+                    "[publish] include_embeddings=true needs [tracker] reid=true");
+        goto out;
+    }
+
     gchar *level = g_key_file_get_string(kf, "ops", "log_level", NULL);
     if (level) {
         gboolean valid = perceptra_log_parse_level(g_strstrip(level), &cfg->log_level);

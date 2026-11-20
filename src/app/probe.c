@@ -6,8 +6,10 @@
 /* probe.c - perceptra_probe (see probe.h). */
 #include "probe.h"
 
+#include "embeddings.h"
 #include "gstnvdsmeta.h"
 #include "log.h"
+#include "timestamps.h"
 
 /* Per-source counters indexed by NvDsFrameMeta.source_id (< MAX_SOURCE_BINS). Fixed-size static
  * storage. A source id may be reused after a stream is removed; counters are cumulative per id. */
@@ -60,15 +62,15 @@ static void fill_sensor(AppCtx *app_ctx, NvDsFrameMeta *fm, PerceptraFrameEvent 
     ev->sensor_name = (name && *name) ? g_strdup(name) : NULL;
 }
 
-static void build_and_enqueue(AppCtx *app_ctx, NvDsFrameMeta *fm) {
+static void build_and_enqueue(AppCtx *app_ctx, NvDsFrameMeta *fm, gint64 ts_ms,
+                              PerceptraTimestampSource ts_used) {
     const guint n = MIN(fm->num_obj_meta, (guint)PERCEPTRA_MAX_OBJECTS_PER_EVENT);
     if (n == 0 && !config.include_empty_frames)
         return;
     PerceptraFrameEvent *ev = perceptra_event_new(n);
     perceptra_event_set_random_id(ev);
-    /* M4: wall clock; ntp / uri_utc sources are implemented in M5 (timestamps.c). */
-    ev->timestamp_ms = g_get_real_time() / 1000;
-    ev->timestamp_source = PERCEPTRA_TS_SYSTEM;
+    ev->timestamp_ms = ts_ms;
+    ev->timestamp_source = ts_used;
     fill_sensor(app_ctx, fm, ev);
     ev->stream_index = fm->source_id;
     ev->frame_number = fm->frame_num >= 0 ? (guint64)fm->frame_num : 0;
@@ -121,7 +123,16 @@ void perceptra_probe(AppCtx *app_ctx, GstBuffer *buf, NvDsBatchMeta *batch_meta,
                     " objects_seen=%" G_GUINT64_FORMAT,
                     source_id, fm->frame_num, num_objects, frames, objects);
         }
-        if (emit && fm->frame_num >= 0 && fm->frame_num % (gint)config.interval_frames == 0)
-            build_and_enqueue(app_ctx, fm);
+        if (!emit)
+            continue;
+        /* Every frame: keeps per-stream clocks (backward NTP, stream reuse) and the ReID cache
+         * current; events only on sampled frames. */
+        PerceptraTimestampSource ts_used;
+        const gint64 ts_ms =
+            perceptra_timestamp_for_frame(source_id, fm->frame_num, fm->ntp_timestamp, fm->buf_pts,
+                                          fm->sensorInfo_meta.uri, &ts_used);
+        perceptra_embeddings_observe_frame(fm);
+        if (fm->frame_num >= 0 && fm->frame_num % (gint)config.interval_frames == 0)
+            build_and_enqueue(app_ctx, fm, ts_ms, ts_used);
     }
 }
