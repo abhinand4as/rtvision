@@ -12,9 +12,9 @@ license:
   notes: "Test use inside the DeepStream container only."
 files:
   onnx: null
-  labels: /opt/nvidia/deepstream/deepstream/samples/configs/deepstream-app/labels.txt   # implementer: verify path in image
+  labels: /opt/nvidia/deepstream/deepstream/samples/models/Primary_Detector/labels.txt  # car, bicycle, person, road_sign
   nvinfer_config: /opt/nvidia/deepstream/deepstream/samples/configs/deepstream-app/config_infer_primary.txt
-input: { width: 960, height: 544 }        # informational when nvinfer_config is set; verify
+input: { width: 960, height: 544 }        # informational (nvinfer_config is used); verified: input_1:0 3x544x960
 output: { family: builtin, num_classes: 4 }
 classes:
   thresholds: { default: 0.4 }
