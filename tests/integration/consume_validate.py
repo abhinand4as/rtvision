@@ -8,7 +8,8 @@
 
 Reads one event per line from stdin (Kafka consumption is added in M7 by piping
 kafka-console-consumer into --stdin). Every line must be a valid event; extra checks:
---sensor-id (every event), --require-objects (at least one event has objects). Exits 0 with
+--sensor-id (every event), --require-objects (at least one event has objects),
+--check-monotonic (per stream: frame numbers increase, timestamps never go back). Exits 0 with
 "PASS:" as soon as --min-events valid events were seen and the checks hold, otherwise prints
 "FAIL:" and exits 1 at EOF or after --timeout seconds.
 """
@@ -33,12 +34,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--min-events", type=int, default=3)
     ap.add_argument("--sensor-id")
     ap.add_argument("--require-objects", action="store_true")
+    ap.add_argument(
+        "--check-monotonic",
+        action="store_true",
+        help="per sensor.id: frame.number increasing and timestamp non-decreasing",
+    )
     ap.add_argument("--timeout", type=float, default=0, help="seconds (0 = until EOF)")
     args = ap.parse_args(argv)
 
     deadline = time.monotonic() + args.timeout if args.timeout > 0 else None
     valid = with_objects = 0
     lineno = 0
+    last: dict[str, tuple[int, str]] = {}  # sensor.id -> (frame.number, timestamp)
     stream = sys.stdin
 
     def done() -> bool:
@@ -68,6 +75,14 @@ def main(argv: list[str] | None = None) -> int:
         if args.sensor_id and event["sensor"]["id"] != args.sensor_id:
             print(f"FAIL: line {lineno}: sensor.id {event['sensor']['id']!r} != {args.sensor_id!r}")
             return 1
+        if args.check_monotonic:
+            sid, cur = event["sensor"]["id"], (event["frame"]["number"], event["timestamp"])
+            prev = last.get(sid)
+            # RFC 3339 UTC strings with fixed width compare chronologically as strings.
+            if prev and (cur[0] <= prev[0] or cur[1] < prev[1]):
+                print(f"FAIL: line {lineno}: {sid}: not monotonic: {prev} -> {cur}")
+                return 1
+            last[sid] = cur
         valid += 1
         with_objects += 1 if event["objects"] else 0
         if done():

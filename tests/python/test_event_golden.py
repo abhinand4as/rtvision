@@ -57,3 +57,34 @@ def test_consume_validate_pass_and_fail() -> None:
     empty["objects"] = []
     res = _consume((json.dumps(empty) + "\n") * 3, "--min-events", "3", "--require-objects")
     assert res.returncode == 1
+
+
+def test_consume_validate_monotonic() -> None:
+    base = json.loads(GOLDEN_EVENT.read_text())
+
+    def ev(frame: int, ts: str) -> str:
+        e = json.loads(json.dumps(base))
+        e["frame"]["number"], e["timestamp"] = frame, ts
+        return json.dumps(e) + "\n"
+
+    good = ev(30, "2026-11-20T06:30:01.000Z") + ev(60, "2026-11-20T06:30:02.000Z")
+    assert _consume(good, "--min-events", "2", "--check-monotonic").returncode == 0
+    bad = ev(60, "2026-11-20T06:30:02.000Z") + ev(90, "2026-11-20T06:30:01.000Z")
+    res = _consume(bad, "--min-events", "2", "--check-monotonic")
+    assert res.returncode == 1 and "not monotonic" in res.stdout
+
+
+def test_track_stability_script() -> None:
+    sys.path.insert(0, str(REPO / "tests" / "integration"))
+    import track_stability
+
+    base = json.loads(GOLDEN_EVENT.read_text())
+    events = []
+    for i, ids in enumerate([[1, 2], [1, 2], [1, 3], [1, 3]]):
+        e = json.loads(json.dumps(base))
+        e["frame"]["number"] = i * 30
+        e["objects"] = [dict(base["objects"][0], track_id=t) for t in ids]
+        events.append(e)
+    r = track_stability.analyse(events)
+    assert r["tracks"] == 3 and r["lifetime_max"] == 4
+    assert abs(r["persistence"] - (1 + 0.5 + 1) / 3) < 1e-9
