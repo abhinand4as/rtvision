@@ -130,7 +130,7 @@ sequenceDiagram
     participant REST as Stream REST :9000
     participant Ops as Ops HTTP :9464
 
-    Op->>Run: docker run ... (PERCEPTRA_MODEL=yolo26s-people)
+    Op->>Run: docker run ... (PERCEPTRA_MODEL=rfdetr-s-people)
     Run->>Run: validate perceptra.yaml + model.yaml (JSON Schema)
     Run->>Run: inspect ONNX outputs vs declared family
     Run->>Run: render ds-main.txt, pgie.txt, app.ini, parser.ini

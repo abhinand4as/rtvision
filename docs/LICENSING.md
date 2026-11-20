@@ -39,10 +39,10 @@ For every file ported from RT-CV:
 - Every `model.yaml` **must** declare `license.spdx` for the weights. `perceptra-run` blocks non-permissive licences unless explicitly accepted (`PERCEPTRA_ACCEPT_MODEL_LICENSE`).
 - **Ultralytics YOLO (incl. YOLO26):** AGPL-3.0. Models trained with Ultralytics are also AGPL-3.0 per Ultralytics. Closed-source or commercial use needs an Ultralytics Enterprise licence. Consequences for this repo:
   - The service never imports or depends on `ultralytics`.
-  - `tools/export/ultralytics/` is an **optional, separately installed** helper with its own README stating the licence. It contains only our own small script that calls the user's installed `ultralytics` package; no Ultralytics code is copied.
-  - The `yolo_e2e` / `yolo_raw` parsers are our own implementations of tensor layouts, not copies of Ultralytics or DeepStream-Yolo code.
-  - `models/examples/yolo26s-people/model.yaml` declares `AGPL-3.0-only`.
-- **Recommended permissive defaults** for commercial users: RT-DETR (Apache-2.0), RF-DETR (Apache-2.0 in most sizes, verify per size), D-FINE (Apache-2.0), YOLOX (Apache-2.0). Verify each before use.
+  - The repository ships **no** Ultralytics model example and no Ultralytics export tool (decision of the project owner, 2026-11-20). A test fixture (`tests/python/fixtures/models/yolo26s-people`, metadata only) declares `AGPL-3.0-only` to test the licence gate.
+  - The `yolo_e2e` / `yolo_raw` parsers are our own implementations of tensor layouts, not copies of Ultralytics or DeepStream-Yolo code; users may bring such models under their own licence acceptance.
+- **Default models: RF-DETR** (Roboflow), Small, **Apache-2.0** code and weights (verified 2026-11-20): `models/examples/rfdetr-s-coco` (compose and integration-test default) and `rfdetr-s-people`. Only Nano/Small/Medium/Large are Apache-2.0; XLarge/2XLarge are PML-1.0 and refused by `tools/export/rfdetr`. The exporter runs in its own host virtualenv (rfdetr, PyTorch CPU, onnx: Apache-2.0/BSD/MIT; certifi and tqdm MPL-2.0) and is never part of the image. The ONNX is never committed (`.gitignore`) nor copied into the image (`.dockerignore`).
+- **Other permissive options:** RT-DETR, D-FINE, DEIM (Apache-2.0; export without the post-processor for the `detr` family), YOLOX (Apache-2.0; needs an objectness-aware parser). Verify each before use.
 - Training datasets can carry their own restrictions (e.g. research-only). Check them for any weights you ship to customers.
 
 ## 6. Third-party runtime dependencies (allow-list)

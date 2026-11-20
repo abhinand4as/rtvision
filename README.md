@@ -38,4 +38,4 @@ Perceptra is a real-time, multi-stream object-detection microservice. Cameras ar
 
 - **Source code:** Apache-2.0 (see `LICENSE`, `NOTICE`).
 - **Container images and binaries:** also include NVIDIA DeepStream, TensorRT and CUDA, under NVIDIA's terms. Build images locally; do not publish them without reviewing those terms.
-- **Model weights:** licensed separately by their owners. Ultralytics YOLO models (incl. YOLO26) are AGPL-3.0 unless you hold an Ultralytics Enterprise licence. See `docs/LICENSING.md`.
+- **Model weights:** licensed separately by their owners and never committed. The default model, RF-DETR Small (`models/examples/rfdetr-s-coco`), is Apache-2.0; you export it locally with `tools/export/rfdetr/export.sh`. Ultralytics YOLO models (incl. YOLO26) are AGPL-3.0 unless you hold an Ultralytics Enterprise licence. See `docs/LICENSING.md`.

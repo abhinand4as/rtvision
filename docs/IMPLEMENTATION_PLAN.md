@@ -52,11 +52,12 @@ perceptra/
 │   ├── schemas.py                JSON Schema validation helpers
 │   └── templates/                ds_main.ini.j2  pgie.ini.j2  app.ini.j2  parser.ini.j2
 ├── tools/export/                 OPTIONAL, separately installed exporters (see LICENSING)
-│   └── ultralytics/README.md + export_yolo.py   (never a dependency of the service)
+│   └── rfdetr/README.md + export.sh + export_rfdetr.py   (own venv, never a dependency of the service)
 ├── config/perceptra.example.yaml
 ├── models/examples/              model.yaml + labels only (no weights)
-│   ├── trafficcamnet-sample/     uses the DeepStream sample model inside the container (tests)
-│   ├── yolo26s-people/
+│   ├── rfdetr-s-coco/            RF-DETR Small (Apache-2.0): compose + integration-test default
+│   ├── rfdetr-s-people/          same network, `person` only
+│   ├── trafficcamnet-sample/     `builtin` escape hatch (DeepStream sample model in the container)
 │   └── rtdetr-r18-coco/
 ├── docker/Dockerfile  docker/entrypoint.sh
 ├── deploy/compose/compose.yaml  deploy/compose/.env.example
@@ -148,11 +149,11 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 - [x] Final Dockerfile (non-root uid 1000, `HEALTHCHECK` on `/live`), `entrypoint.sh` → `perceptra-run`.
 - [x] `deploy/compose/compose.yaml`: `apache/kafka` (KRaft, single node) + `perceptra` (GPU reservation, ports 9000/9464, volumes).
 - [x] `tests/integration/run_all.sh`: deploy → health → add stream → consume ≥ `MIN_EVENTS` and validate each against the schema → remove stream → `docker compose stop` exits cleanly.
-- [ ] YOLO26 people profile verified end to end (requires the user to supply the ONNX; see `models/examples/yolo26s-people/README.md`). **PENDING-USER-MODEL**
+- [x] ~~YOLO26 people profile~~ → RF-DETR Small people profile (`models/examples/rfdetr-s-people`, Apache-2.0) verified end to end; RF-DETR also replaces TrafficCamNet as the integration-test model (deviation #31).
 
 **Acceptance (GPU):** `tests/integration/run_all.sh` passes on a clean machine.
 
-**Status:** done (2026-11-20), one item PENDING-USER-MODEL. `PERCEPTRA_ACCEPT_MODEL_LICENSE=LicenseRef-NVIDIA-AI-Product-License tests/integration/run_all.sh` → `PASS: integration test` in 51 s: dry-run preflight, `/startup` 200 (12 s with engine build, 3 s from the engine cache), `/live`, `/ready`, stream add, 3 Kafka events valid against the schema (sensor `it-cam-0`, with objects, monotonic), Kafka key `it-cam-0` with `schema`/`content-type` headers, `perceptra_events_published_total` > 0, stream remove → `perceptra_streams_active` 0, `docker compose stop` → exit 0 in 8–9 s. This is the first run of the Kafka backend against a broker (apache/kafka 4.3.2, KRaft). The image runs as uid 1000 (`perceptra`) with a `/live` `HEALTHCHECK` (container reported `healthy`). Deviations #28–#30: the default test model's licence must be accepted explicitly; ports bind to 127.0.0.1 by default; builtin nvinfer configs get their engine cached. CI lint adds shellcheck and `docker compose config`. **PENDING-USER-MODEL:** YOLO26 needs an ONNX exported with Ultralytics (AGPL-3.0 tooling and weights) by the project owner; verify with `PERCEPTRA_MODEL=yolo26s-people PERCEPTRA_ACCEPT_MODEL_LICENSE=AGPL-3.0-only tests/integration/run_all.sh` after placing `yolo26s.onnx` in `models/examples/yolo26s-people/` (note: `IT_CAMERA_URL` sample video has people).
+**Status:** done (2026-11-20). Default model RF-DETR Small (Apache-2.0, deviation #31): `tools/export/rfdetr/export.sh` then `tests/integration/run_all.sh` → `PASS: integration test` with no licence acceptance: dry-run preflight, `/startup` 200 (37 s with the engine build, ~3 s from the engine cache), `/live`, `/ready`, stream add, Kafka events valid against the schema (sensor `it-cam-0`, monotonic; cars, persons, backpack, bus, truck at 0.55–0.96, all tracked), Kafka key `it-cam-0` with `schema`/`content-type` headers, `perceptra_events_published_total` > 0, stream remove → `perceptra_streams_active` 0, `docker compose stop` → exit 0 in 9 s. `PERCEPTRA_MODEL=rfdetr-s-people` passes the same test on topic `people-raw` with only `person` objects. First runs of the Kafka backend against a broker (apache/kafka 4.3.2, KRaft). The image runs as uid 1000 (`perceptra`) with a `/live` `HEALTHCHECK`. The previous default `trafficcamnet-sample` also passes (with `PERCEPTRA_ACCEPT_MODEL_LICENSE=LicenseRef-NVIDIA-AI-Product-License`, 12 s → 3 s startup with its engine now cached). Deviations #28–#31. CI lint adds shellcheck and `docker compose config`.
 
 ### M8 — Documentation and release hygiene
 - [ ] README quick start (build, run, add camera, see events), model onboarding guide, troubleshooting.

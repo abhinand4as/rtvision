@@ -27,7 +27,7 @@
 
 ## Integration (`tests/integration/run_all.sh`)
 
-1. `docker compose -f deploy/compose/compose.yaml up -d` (Kafka + Perceptra with `PERCEPTRA_MODEL=trafficcamnet-sample`, which needs no user-supplied weights).
+1. `docker compose -f deploy/compose/compose.yaml up -d` (Kafka + Perceptra with `PERCEPTRA_MODEL=rfdetr-s-coco`, RF-DETR Small, Apache-2.0; export its ONNX once with `tools/export/rfdetr/export.sh`).
 2. Wait for `GET :9464/startup` = 200 (timeout 600 s for the first engine build).
 3. `GET :9464/ready` and `/live` = 200.
 4. Add stream `file:///opt/nvidia/deepstream/deepstream/samples/streams/sample_1080p_h264.mp4` with `camera_id=it-cam-0`.
@@ -41,11 +41,11 @@ Each script prints `PASS:`/`FAIL:` and exits non-zero on failure. Environment kn
 Running it:
 
 ```bash
-cp deploy/compose/.env.example deploy/compose/.env    # then set PERCEPTRA_ACCEPT_MODEL_LICENSE
+tools/export/rfdetr/export.sh                         # once: models/examples/rfdetr-s-coco/rfdetr-small.onnx
 tests/integration/run_all.sh                          # BUILD=1 to rebuild, KEEP_STACK=1 to keep it up
 ```
 
-- The default model's licence is not on the permissive allow-list: set `PERCEPTRA_ACCEPT_MODEL_LICENSE=LicenseRef-NVIDIA-AI-Product-License` (in `.env` or the environment) once you have read it. Without it the script stops after a `perceptra-run --dry-run` preflight (deviation #28).
+- The script starts with a `perceptra-run --dry-run` preflight: a missing ONNX or a non-permissive model licence (e.g. `PERCEPTRA_MODEL=trafficcamnet-sample` needs `PERCEPTRA_ACCEPT_MODEL_LICENSE=LicenseRef-NVIDIA-AI-Product-License`) fails in seconds with the fix (deviations #28, #31).
 - Besides the steps above, the script checks the Kafka message key (`sensor.id`) and the `schema`/`content-type` headers, and runs `consume_validate.py --check-monotonic`.
 - The stack is torn down at the end (`docker compose down`); the engine cache volume `perceptra_engines` is kept, so later runs skip the engine build.
 - Python with `jsonschema` and `PyYAML` is needed on the host (the repo's `.venv` is used if present).

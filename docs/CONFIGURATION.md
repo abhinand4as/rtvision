@@ -97,44 +97,44 @@ observability:
 
 ```yaml
 schema_version: 1
-name: yolo26s-people              # [a-z0-9-]+, used in engine name, metrics, default topic
-version: "2026.1"
+name: rfdetr-s-people             # [a-z0-9-]+, used in engine name, metrics, default topic
+version: "rfdetr-1.12.1-small"
 task: detect                      # detect (v1) | segment | pose (reserved)
 license:
-  spdx: AGPL-3.0-only             # SPDX id of the WEIGHTS
-  source: https://docs.ultralytics.com/models/yolo26/
-  notes: "Commercial closed-source use requires an Ultralytics Enterprise licence."
+  spdx: Apache-2.0                # SPDX id of the WEIGHTS (non-permissive ids need acceptance)
+  source: https://github.com/roboflow/rf-detr
+  notes: "Nano/Small/Medium/Large weights are Apache-2.0; XL and 2XL are PML-1.0."
 
 files:
-  onnx: yolo26s.onnx              # relative to this model's directory
-  labels: labels.txt              # one label per line, line index = class id
+  onnx: ../rfdetr-s-coco/rfdetr-small.onnx   # relative to this model's directory
+  labels: ../rfdetr-s-coco/labels.txt        # one label per line, line index = class id
   engine: null                    # optional prebuilt engine (else built + cached)
   int8_calibration: null          # calibration cache for int8
 
 input:
-  width: 640
-  height: 640
+  width: 512
+  height: 512
   channels: 3
   color: RGB                      # RGB | BGR | GRAY
-  scale: 0.0039215697906911373    # pixel * scale
-  mean: [0.0, 0.0, 0.0]           # subtracted before scale (nvinfer offsets)
-  resize: letterbox_center        # letterbox_center | letterbox_topleft | stretch
+  scale: 0.017352806              # (pixel - mean) * scale; ImageNet std approximated (one scale)
+  mean: [123.675, 116.28, 103.53] # subtracted before scale (nvinfer offsets)
+  resize: stretch                 # letterbox_center | letterbox_topleft | stretch
   dynamic_batch: true
 
 output:
-  family: yolo_e2e                # yolo_e2e | yolo_raw | detr | efficient_nms
-  layers: [output0]               # names in ONNX order expected by the family
-  box_format: xyxy_px             # family default if omitted
-  activation: none                # family default if omitted (detr: sigmoid)
+  family: detr                    # yolo_e2e | yolo_raw | detr | efficient_nms
+  layers: [dets, labels]          # names in ONNX order expected by the family
+  box_format: cxcywh_norm         # family default if omitted
+  activation: sigmoid             # family default if omitted (detr: sigmoid)
   has_background_class: false     # detr/softmax models
-  num_classes: 80
+  num_classes: 91                 # RF-DETR: logit index = COCO category id
 
 classes:
   keep: [person]                  # labels to keep; omit or [] = all
   thresholds:
-    default: 0.35
+    default: 0.4
     per_class: {}                 # e.g. { person: 0.4 }
-  nms_iou: 0.45                   # only for yolo_raw
+  # nms_iou: 0.45                 # only for yolo_raw
   topk: 300
 
 precision: fp16                   # fp32 | fp16 | int8
@@ -182,11 +182,11 @@ If `license.spdx` is not one of `Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause, CC
 
 ```ini
 [model]
-name=yolo26s-people
-version=2026.1
+name=rfdetr-s-people
+version=rfdetr-1.12.1-small
 task=detect
-family=yolo_e2e
-license=AGPL-3.0-only
+family=detr
+license=Apache-2.0
 precision=fp16
 
 [publish]

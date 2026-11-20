@@ -12,6 +12,9 @@ All notable changes are documented here (format: Keep a Changelog; versioning: S
   with `health.sh`, `add_stream.sh`, `remove_stream.sh`, `common.sh` (dry-run licence preflight,
   fail-fast on container restarts, Kafka key/header checks, graceful-stop timing); engine caching for
   `family: builtin` nvinfer configs; CI runs shellcheck and `docker compose config`.
+- RF-DETR Small (Roboflow, Apache-2.0) as the default model: `models/examples/rfdetr-s-coco`
+  (compose and integration-test default, 91-line COCO-id labels) and `rfdetr-s-people`;
+  `tools/export/rfdetr/` (host venv exporter, Apache-2.0 sizes only).
 - M6 ops server, metrics, hot swap: libsoup-3.0 ops server on its own thread (`/live`, `/ready`,
   `/startup`, `/metrics`, `/info`), Prometheus metrics from ARCHITECTURE §8 (per-stream FPS, frames,
   objects per label, event counters, queue depth, model info, swaps), model hot swap from
@@ -60,7 +63,13 @@ All notable changes are documented here (format: Keep a Changelog; versioning: S
 - `pyproject.toml` for the `perceptra-tools` package (`perceptra-run` entry point).
 - Specification package: architecture, implementation plan, configuration, parser contract, event schema v1, API, testing, licensing policy, roadmap.
 
+### Removed
+- `models/examples/yolo26s-people` (AGPL-3.0 weights; now a metadata-only test fixture) and the
+  `tools/export/ultralytics` placeholder.
+
 ### Fixed
+- `.dockerignore` weight/media patterns only matched the build-context root; now `**/`. The onnx
+  package's bundled test models are no longer copied into the image.
 - NVIDIA's original copyright line in RT-CV-derived files had been re-wrapped by clang-format;
   restored, `ReflowComments: false`, and the SPDX check now enforces the verbatim line.
 
