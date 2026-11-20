@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: Apache-2.0
+# Keep the build context small and free of weights/media (see docs/LICENSING.md).
+.git
+.github
+.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+build
+output
+generated
+deploy/compose/.env
+*.pt
+*.pth
+*.onnx
+*.engine
+*.plan
+*.etlt
+*.trt
+*.safetensors
+*.mp4
+*.mkv
+*.avi
+*.h264
+*.h265
+*.o
+*.so
+*.a
