@@ -39,6 +39,11 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y --no-install-recommends clang-format
           git ls-files -z '*.c' '*.h' '*.cpp' '*.hpp' | xargs -0 -r clang-format --dry-run --Werror
+      - name: shell scripts and compose file
+        run: |
+          sudo apt-get install -y --no-install-recommends shellcheck
+          git ls-files -z '*.sh' | xargs -0 -r shellcheck -x
+          docker compose -f deploy/compose/compose.yaml config -q
 
   python-tests:
     runs-on: ubuntu-24.04
