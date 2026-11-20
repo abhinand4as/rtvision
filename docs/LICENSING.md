@@ -78,11 +78,16 @@ Verify every licence in this table against the installed package metadata before
 | `CONTRIBUTING.md` | DCO sign-off (`git commit -s`); contributions licensed under Apache-2.0 |
 
 ## 8. Release checklist
-- [ ] `tools/ci/check_spdx.py` passes; forbidden-file check passes.
-- [ ] `NOTICE` lists every RT-CV-derived file; each has a modification notice.
-- [ ] `THIRD_PARTY_NOTICES.md` regenerated from the built image.
-- [ ] No NVIDIA/Ultralytics trademarks in name or logo.
-- [ ] Example `model.yaml` files declare correct licences.
-- [ ] README states: the source is Apache-2.0; images and binaries include NVIDIA components under NVIDIA terms; model weights are licensed separately.
-- [ ] Decision on publishing images recorded (default: no).
-- [ ] Project name checked for conflicts (GitHub, PyPI, trademarks).
+
+Status for `v0.1.0` (checked 2026-11-20). Items marked **OWNER** need the project owner's decision.
+
+- [x] `tools/ci/check_spdx.py` passes; forbidden-file check passes. (128 files; 0 violations; also enforced in CI.)
+- [x] `NOTICE` lists every RT-CV-derived file; each has a modification notice. (6 files: `main.c`, `perf.c`, `Makefile`, `timestamps.c`, `embeddings.c`, `ota.c`; the verbatim NVIDIA line is enforced by `check_spdx.py`.)
+- [x] `THIRD_PARTY_NOTICES.md` regenerated from the built image (`tools/ci/third_party_report.py --image perceptra:local --check --write`: 14 Python packages, 0 apt packages added on top of the base image, 69 linked libraries, nothing needing review).
+- [x] No NVIDIA/Ultralytics trademarks in name or logo. (No logo; NVIDIA/Ultralytics names appear only descriptively and in the `NOTICE` trademark statement.)
+- [x] Example `model.yaml` files declare correct licences: `rfdetr-s-coco`, `rfdetr-s-people`, `rtdetr-r18-coco` Apache-2.0; `trafficcamnet-sample` `LicenseRef-NVIDIA-AI-Product-License` (gated). No AGPL example ships (the YOLO26 file is a test fixture).
+- [x] README states: the source is Apache-2.0; images and binaries include NVIDIA components under NVIDIA terms; model weights are licensed separately; H.264/H.265 patent note (§4).
+- [x] Decision on publishing images recorded: **no images are published** for `v0.1.0`; users build locally (§4 default policy). Changing this needs a recorded owner decision.
+- [ ] **OWNER — project name.** Checked 2026-11-20: PyPI `perceptra` is taken by an unrelated computer-vision MLOps SDK ("Perceptra Hub"), and a company "Perceptra.ai" lists computer-vision products; our package name `perceptra-tools` is free on PyPI. No trademark search was done (USPTO/EUIPO). Decide whether to keep the name or rename before a public release (`CLAUDE.md` lists every place the name appears).
+- [ ] **OWNER — `<PROJECT_OWNER>`** is still a placeholder in `NOTICE` and the copyright line of every source file (97 files); replace it before the release.
+- [ ] **OWNER — export tooling licences.** `tools/export/rfdetr` installs, in its own host virtualenv (never in the image), packages under licences that are permissive but not all on the §6 list: MPL-2.0 (`certifi`, `tqdm`, file-level copyleft, used unmodified), plus Apache-2.0/BSD/MIT. Confirm this is acceptable.

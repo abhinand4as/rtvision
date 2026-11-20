@@ -156,10 +156,17 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 **Status:** done (2026-11-20). Default model RF-DETR Small (Apache-2.0, deviation #31): `tools/export/rfdetr/export.sh` then `tests/integration/run_all.sh` → `PASS: integration test` with no licence acceptance: dry-run preflight, `/startup` 200 (37 s with the engine build, ~3 s from the engine cache), `/live`, `/ready`, stream add, Kafka events valid against the schema (sensor `it-cam-0`, monotonic; cars, persons, backpack, bus, truck at 0.55–0.96, all tracked), Kafka key `it-cam-0` with `schema`/`content-type` headers, `perceptra_events_published_total` > 0, stream remove → `perceptra_streams_active` 0, `docker compose stop` → exit 0 in 9 s. `PERCEPTRA_MODEL=rfdetr-s-people` passes the same test on topic `people-raw` with only `person` objects. First runs of the Kafka backend against a broker (apache/kafka 4.3.2, KRaft). The image runs as uid 1000 (`perceptra`) with a `/live` `HEALTHCHECK`. The previous default `trafficcamnet-sample` also passes (with `PERCEPTRA_ACCEPT_MODEL_LICENSE=LicenseRef-NVIDIA-AI-Product-License`, 12 s → 3 s startup with its engine now cached). Deviations #28–#31. CI lint adds shellcheck and `docker compose config`.
 
 ### M8 — Documentation and release hygiene
-- [ ] README quick start (build, run, add camera, see events), model onboarding guide, troubleshooting.
-- [ ] `examples/consumer/occupancy.py` (per-camera person count from events).
-- [ ] `docs/LICENSING.md` release checklist completed; `THIRD_PARTY_NOTICES.md` regenerated (`tools/ci/third_party_report.py` lists the apt and pip packages actually installed in the image with their licences).
-- [ ] Tag `v0.1.0`.
+- [x] README quick start (build, run, add camera, see events), model onboarding guide, troubleshooting.
+- [x] `examples/consumer/occupancy.py` (per-camera person count from events).
+- [x] `docs/LICENSING.md` release checklist completed; `THIRD_PARTY_NOTICES.md` regenerated (`tools/ci/third_party_report.py` lists the apt and pip packages actually installed in the image with their licences). Three items are owner decisions (see below).
+- [ ] Tag `v0.1.0`. **PENDING-OWNER**
+
+**Status:** done except the tag (2026-11-20).
+- README quick start executed verbatim from a fresh clone with an empty engine cache: `export.sh` (also creating its venv from scratch, 60 s, byte-identical ONNX), `docker compose up -d --build`, the `/ready` wait loop, stream add, events printed for the whole sample video. Found and documented: DeepStream removes a file stream by itself at end-of-file, so the final remove answers `No record found` (harmless).
+- `docs/MODELS.md` (bring your own model, written from the RF-DETR onboarding) and `docs/TROUBLESHOOTING.md` (exit codes, startup, streams, events, shutdown; every metric/config name checked against the code).
+- `examples/consumer/print_events.py` and `occupancy.py` (stdin JSON Lines, standard library only); `occupancy.py` verified on live Kafka output of `rfdetr-s-people` (smoothed counts, 0 after the stream ended). Unit tests in `tests/python/test_examples.py`.
+- `tools/ci/third_party_report.py`: report from the built image; `--check` passes.
+- **PENDING-OWNER** before tagging: project name (PyPI `perceptra` is taken by an unrelated CV SDK), `<PROJECT_OWNER>` placeholder, export-tooling licences (MPL-2.0 `certifi`/`tqdm`, host only). See `docs/LICENSING.md` §8.
 
 ---
 

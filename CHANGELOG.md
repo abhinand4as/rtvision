@@ -5,6 +5,11 @@ All notable changes are documented here (format: Keep a Changelog; versioning: S
 
 ## [Unreleased]
 ### Added
+- M8 documentation and release hygiene: product README with a verified quick start,
+  `docs/MODELS.md` (bring your own model), `docs/TROUBLESHOOTING.md`,
+  `examples/consumer/print_events.py` and `occupancy.py`, `tools/ci/third_party_report.py`
+  (licences of what the built image contains; `THIRD_PARTY_NOTICES.md` regenerated), release
+  checklist status in `docs/LICENSING.md` §8.
 - M7 container, compose, integration tests: non-root image (uid 1000 `perceptra`), `HEALTHCHECK` on
   `/live`, `docker/entrypoint.sh` (engine-cache writability check, passes flags to `perceptra-run`);
   `deploy/compose/compose.yaml` (apache/kafka 4.3.2 KRaft + perceptra with GPU reservation, engine
