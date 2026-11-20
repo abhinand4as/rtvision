@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 <PROJECT_OWNER>
+"""Shared fixtures for the perceptra_tools tests."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+REPO = Path(__file__).resolve().parents[2]
+EXAMPLES = REPO / "models" / "examples"
+EXAMPLE_CONFIG = REPO / "config" / "perceptra.example.yaml"
+GOLDEN = REPO / "tests" / "golden"
+
+
+@pytest.fixture
+def repo() -> Path:
+    return REPO
+
+
+def write_model(tmp_path: Path, model_yaml: str, labels: list[str] | None = None) -> Path:
+    """Writes a model dir (model.yaml + labels.txt) and returns the model.yaml path."""
+    d = tmp_path / "models" / "m"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "model.yaml").write_text(model_yaml)
+    if labels is not None:
+        (d / "labels.txt").write_text("\n".join(labels) + "\n")
+    return d / "model.yaml"

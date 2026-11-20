@@ -39,5 +39,6 @@ __pycache__/
 deploy/compose/.env
 output/
 generated/
+!tests/golden/generated/
 *.log
 .DS_Store
