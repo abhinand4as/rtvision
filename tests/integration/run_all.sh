@@ -46,17 +46,21 @@ fi
 
 # Config and licence gate, in seconds instead of a restart loop (exit 2 config, 3 licence).
 set +e
-compose run --rm --no-deps -T perceptra --dry-run >/dev/null 2>"${TMPDIR:-/tmp}/perceptra-it-dryrun.$$"
+dryrun="$(compose run --rm --no-deps -T perceptra --dry-run 2>&1 >/dev/null)"
 rc=$?
 set -e
 if ((rc != 0)); then
-    grep -v '^\s*$' "${TMPDIR:-/tmp}/perceptra-it-dryrun.$$" | tail -12 >&2
-    rm -f "${TMPDIR:-/tmp}/perceptra-it-dryrun.$$"
+    grep -v '^\s*$' <<<"$dryrun" | tail -12 >&2
     ((rc == 3)) && fail "model licence not accepted: set PERCEPTRA_ACCEPT_MODEL_LICENSE (shown" \
         "above) in deploy/compose/.env or the environment, after reading docs/LICENSING.md"
+    model="${PERCEPTRA_MODEL:-rfdetr-s-coco}"
+    if [[ "$dryrun" == *"files.onnx"* ]]; then
+        hint="see models/examples/$model/README.md"
+        [[ "$model" == rfdetr-* ]] && hint="run tools/export/rfdetr/export.sh first"
+        fail "ONNX for $model missing: $hint"
+    fi
     fail "perceptra-run --dry-run exit $rc (configuration error above)"
 fi
-rm -f "${TMPDIR:-/tmp}/perceptra-it-dryrun.$$"
 pass "configuration valid (perceptra-run --dry-run)"
 
 trap finish EXIT
@@ -64,7 +68,7 @@ trap finish EXIT
 # ---- 1. deploy (fresh Kafka; the engine cache volume is kept) --------------------------------
 compose down --remove-orphans >/dev/null 2>&1 || true
 compose up -d
-pass "compose up ($image, model ${PERCEPTRA_MODEL:-trafficcamnet-sample})"
+pass "compose up ($image, model ${PERCEPTRA_MODEL:-rfdetr-s-coco})"
 
 # ---- 2-3. health -----------------------------------------------------------------------------
 "$REPO_ROOT/tests/integration/health.sh"

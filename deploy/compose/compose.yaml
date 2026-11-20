@@ -52,7 +52,7 @@ services:
       kafka:
         condition: service_healthy
     environment:
-      PERCEPTRA_MODEL: ${PERCEPTRA_MODEL:-trafficcamnet-sample}
+      PERCEPTRA_MODEL: ${PERCEPTRA_MODEL:-rfdetr-s-coco}
       PERCEPTRA__PUBLISH__BACKEND: kafka
       PERCEPTRA__PUBLISH__KAFKA__BROKERS: kafka:9092
       # Set to the SPDX id of a non-permissive model licence to accept it (docs/LICENSING.md).
