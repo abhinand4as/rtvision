@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: Apache-2.0
+# People detection with RF-DETR Small (Roboflow, Apache-2.0): the rfdetr-s-coco network filtered to
+# `person`. Shares the ONNX and labels with ../rfdetr-s-coco (export once, see its README.md).
+schema_version: 1
+name: rfdetr-s-people
+version: "rfdetr-1.12.1-small"
+task: detect
+license:
+  spdx: Apache-2.0
+  source: https://github.com/roboflow/rf-detr
+  notes: "Nano/Small/Medium/Large weights are Apache-2.0; XL and 2XL are PML-1.0 (not allowed)."
+files:
+  onnx: ../rfdetr-s-coco/rfdetr-small.onnx
+  labels: ../rfdetr-s-coco/labels.txt
+  engine: null
+  int8_calibration: null
+input:
+  width: 512
+  height: 512
+  channels: 3
+  color: RGB
+  # ImageNet normalisation. nvinfer has one scale factor for all channels, so 1 / (255 * 0.226)
+  # approximates std (0.229, 0.224, 0.225); verified to give the same detections as rfdetr.
+  scale: 0.017352806
+  mean: [123.675, 116.28, 103.53]
+  resize: stretch
+  dynamic_batch: true
+output:
+  family: detr
+  layers: [dets, labels]        # boxes [Q,4] then class logits [Q,91]
+  box_format: cxcywh_norm
+  activation: sigmoid
+  has_background_class: false
+  num_classes: 91               # logit index = COCO category id; labels.txt has 91 lines
+classes:
+  keep: [person]
+  thresholds: { default: 0.4, per_class: {} }
+  topk: 300
+precision: fp16
+messaging:
+  topic: people-raw
