@@ -10,8 +10,8 @@
 # The resulting image contains NVIDIA software under NVIDIA's terms; do not publish it
 # (docs/LICENSING.md §4).
 #
-# M1 skeleton: runs the hand-written config in config/dev/. Python tools (perceptra-run) are
-# added in M3; non-root user, HEALTHCHECK and entrypoint.sh in M7.
+# Entry point: perceptra-run (validates perceptra.yaml + model.yaml, generates the DeepStream
+# configs, execs the binary). Non-root user, HEALTHCHECK and entrypoint.sh follow in M7.
 
 ARG DS_IMAGE=nvcr.io/nvidia/deepstream:9.1-samples-multiarch
 
@@ -44,13 +44,28 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends librdkafka1 libsoup-3.0-0 libjson-glib-1.0-0; \
     rm -rf /var/lib/apt/lists/*
 
+# Python tools (perceptra-run). The image has no venv/ensurepip, so the package and its
+# dependencies are installed into a private --target dir; system Python stays untouched.
+COPY pyproject.toml README.md /tmp/perceptra-tools/
+COPY tools/perceptra_tools/ /tmp/perceptra-tools/tools/perceptra_tools/
+RUN set -eux; \
+    python3 -m pip install --no-cache-dir --target /opt/perceptra/python /tmp/perceptra-tools; \
+    rm -rf /tmp/perceptra-tools; \
+    mkdir -p /opt/perceptra/bin /opt/perceptra/engines /opt/perceptra/output; \
+    printf '#!/bin/sh\nexec python3 -m perceptra_tools.run "$@"\n' > /opt/perceptra/bin/perceptra-run; \
+    chmod 0755 /opt/perceptra/bin/perceptra-run
+
 COPY --from=build /src/src/app/perceptra /opt/perceptra/bin/perceptra
 COPY --from=build /src/src/parsers/libperceptra_parsers.so /opt/perceptra/lib/libperceptra_parsers.so
-COPY config/dev/ /opt/perceptra/config/dev/
+COPY schemas/ /opt/perceptra/schemas/
+COPY models/examples/ /opt/perceptra/models/
+COPY config/perceptra.example.yaml /opt/perceptra/config/perceptra.yaml
 
-ENV PATH=/opt/perceptra/bin:${PATH}
+ENV PATH=/opt/perceptra/bin:${PATH} \
+    PYTHONPATH=/opt/perceptra/python \
+    PERCEPTRA_SCHEMA_DIR=/opt/perceptra/schemas
 EXPOSE 9000 9464
 STOPSIGNAL SIGTERM
 
-ENTRYPOINT ["/opt/perceptra/bin/perceptra"]
-CMD ["-c", "/opt/perceptra/config/dev/ds-main.m1.ini", "-a", "/opt/perceptra/config/dev/app.m1.ini"]
+# Select the model with PERCEPTRA_MODEL (name under /opt/perceptra/models or a path).
+ENTRYPOINT ["perceptra-run"]
