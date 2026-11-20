@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.invalid/perceptra/detection_event.v1.schema.json",
+  "$comment": "SPDX-License-Identifier: Apache-2.0",
   "title": "Perceptra detection event v1",
   "type": "object",
   "additionalProperties": true,

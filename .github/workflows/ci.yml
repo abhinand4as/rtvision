@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: Apache-2.0
+# CI without a GPU: licence hygiene, lint, unit tests.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  licence:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: SPDX headers
+        run: python tools/ci/check_spdx.py
+      - name: Forbidden files (weights, media, DeepStream sources)
+        run: python tools/ci/check_forbidden.py
+
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: ruff
+        run: |
+          pip install "ruff>=0.6"
+          ruff check .
+          ruff format --check .
+      - name: clang-format
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends clang-format
+          git ls-files -z '*.c' '*.h' '*.cpp' '*.hpp' | xargs -0 -r clang-format --dry-run --Werror
+
+  python-tests:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[dev]"
+      - run: pytest -q
+
+  # Enabled in M2: parser core unit tests (no DeepStream needed).
+  # parser-core:
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - run: make -C src/parsers test-core

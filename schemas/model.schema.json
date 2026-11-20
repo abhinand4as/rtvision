@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.invalid/perceptra/model.schema.json",
+  "$comment": "SPDX-License-Identifier: Apache-2.0",
   "title": "Perceptra model description",
   "type": "object",
   "additionalProperties": false,

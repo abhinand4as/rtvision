@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: Apache-2.0
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "perceptra-tools"
+version = "0.1.0.dev0"
+description = "Configuration generator and entrypoint for the Perceptra detection microservice"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+# Allow-list only: docs/LICENSING.md §6. Ask the project owner before adding anything else.
+dependencies = [
+  "PyYAML>=6.0",
+  "Jinja2>=3.1",
+  "jsonschema>=4.18",
+  "onnx>=1.15",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+perceptra-run = "perceptra_tools.run:main"
+
+[tool.setuptools.packages.find]
+where = ["tools"]
+include = ["perceptra_tools*"]
+
+[tool.setuptools.package-data]
+perceptra_tools = ["templates/*.j2"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]

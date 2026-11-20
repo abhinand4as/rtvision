@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 <PROJECT_OWNER>
+"""Repository hygiene: SPDX headers and forbidden files (docs/LICENSING.md)."""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+CI = ROOT / "tools" / "ci"
+
+
+def _run(script: str, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(CI / script), *args], capture_output=True, text=True, check=False
+    )
+
+
+def test_spdx_headers_pass() -> None:
+    res = _run("check_spdx.py")
+    assert res.returncode == 0, res.stdout + res.stderr
+
+
+def test_no_forbidden_files() -> None:
+    res = _run("check_forbidden.py")
+    assert res.returncode == 0, res.stdout + res.stderr
+
+
+@pytest.mark.parametrize(
+    ("name", "content", "ok"),
+    [
+        ("a.py", "# SPDX-License-Identifier: Apache-2.0\n# Copyright (c) 2026 X\n", True),
+        ("a.py", "# SPDX-License-Identifier: Apache-2.0\n", False),  # code needs copyright
+        ("a.c", "/* SPDX-License-Identifier: MIT */\n/* Copyright (c) 2026 X */\n", False),
+        ("a.md", "<!-- SPDX-License-Identifier: Apache-2.0 -->\n", True),
+        ("a.md", "# no header\n", False),
+        ("a.xyz", "SPDX-License-Identifier: Apache-2.0\n", False),  # unknown type
+        ("labels.txt", "person\n", True),  # exempt
+    ],
+)
+def test_spdx_rules(tmp_path: Path, name: str, content: str, ok: bool) -> None:
+    (tmp_path / name).write_text(content)
+    res = _run("check_spdx.py", "--root", str(tmp_path))
+    assert (res.returncode == 0) is ok, res.stdout
+
+
+@pytest.mark.parametrize(
+    ("name", "ok"),
+    [
+        ("model.onnx", False),
+        ("weights/best.pt", False),
+        ("clip.mp4", False),
+        ("vendor/deepstream_app.c", False),
+        ("includes/nvdsinfer_custom_impl.h", False),
+        ("src/app/main.c", True),
+    ],
+)
+def test_forbidden_rules(tmp_path: Path, name: str, ok: bool) -> None:
+    target = tmp_path / name
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(b"x")
+    res = _run("check_forbidden.py", "--root", str(tmp_path))
+    assert (res.returncode == 0) is ok, res.stdout
