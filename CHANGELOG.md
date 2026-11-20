@@ -5,6 +5,13 @@ All notable changes are documented here (format: Keep a Changelog; versioning: S
 
 ## [Unreleased]
 ### Added
+- M4 events and publisher: `PerceptraFrameEvent`/`PerceptraObject` model, task registry (`detect`;
+  `segment`/`pose` stubs), detect handler (bbox rescaled to source resolution, nullable track id and
+  confidence), JSON serializer for `perceptra.detection.v1`, bounded publisher queue with
+  `drop_oldest`/`drop_newest`, worker thread and bounded shutdown flush, backends `stdout`/`file`
+  (JSON Lines) and `kafka` (librdkafka, key = sensor id, `schema`/`content-type` headers, property
+  passthrough, delivery reports, health check); `make -C src/app test`; golden event
+  `tests/golden/event_basic.json`; `tests/integration/consume_validate.py --stdin`; CI job `app-unit`.
 - M3 configuration system: `perceptra-run` (CLI > env > default file selection, `PERCEPTRA__…` env
   overrides, JSON Schema validation with field paths, task check, model licence gate with exit 3,
   ONNX output check, config generation, engine cache, `execv` of the binary); `gen_configs.py` with

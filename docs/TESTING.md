@@ -5,7 +5,7 @@
 |---|---|---|---|
 | Parser core unit tests | CI (no GPU) | `make -C src/parsers test-core` | every PR |
 | Python tools (schemas, generator, ONNX inspect) | CI | `pytest -q tests/python` | every PR |
-| Serializer golden test | CI (needs json-glib only) | `make -C src/app test-serialize` + pytest schema check | every PR |
+| Serializer golden + publisher queue tests | CI (GLib only) | `make -C src/app test` (`test-serialize`, `test-publisher`) + pytest schema check | every PR |
 | Static checks | CI | ruff, clang-format, SPDX check, forbidden-files check | every PR |
 | Integration (compose) | GPU host | `tests/integration/run_all.sh` | before release |
 | Model accuracy smoke | GPU host | `tests/integration/accuracy_smoke.py` (optional, user-supplied clip + golden JSON) | when adding a model |

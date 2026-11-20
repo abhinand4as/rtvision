@@ -115,11 +115,13 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 **Status:** done (2026-11-20). `pytest -q`: 83 passed (schemas, env overrides, event schema, golden configs for the 3 example models, mapping rules, licence gate exit 3, ONNX checks on synthetic graphs, `perceptra-run` dry runs). Errors name the file and field path, e.g. `service.max_streams: -1 is less than the minimum of 1`. GPU check: the image's entry point is now `perceptra-run`; TrafficCamNet (builtin) and a synthetic `yolo_e2e` ONNX (`tests/integration/make_synthetic_onnx.py`, read-only models mount) run from generated configs, the synthetic model yields exactly the 2 expected detections per frame through `libperceptra_parsers.so`, and its engine is cached and reused on restart (deviation #13).
 
 ### M4 — Events and publisher
-- [ ] `event_model.h`, `task_detect.c` (bbox rescale to source resolution, track id `null` when untracked, label from `obj_label`), `event_serialize.c` per `docs/EVENT_SCHEMA.md`.
-- [ ] `publisher.c` (bounded queue, `drop_oldest`/`drop_newest`, flush on shutdown with a timeout), `publisher_stream.c` (stdout/file JSONL), `publisher_kafka.c` (librdkafka; key = `sensor.id`; headers `schema`, `content-type`; passthrough of `publish.kafka.properties`; delivery-report callback → metrics).
-- [ ] Serializer golden test: C test binary builds a fixed event → JSON → compared to `tests/golden/event_basic.json` and validated by pytest against the schema.
+- [x] `event_model.h`, `task_detect.c` (bbox rescale to source resolution, track id `null` when untracked, label from `obj_label`), `event_serialize.c` per `docs/EVENT_SCHEMA.md`.
+- [x] `publisher.c` (bounded queue, `drop_oldest`/`drop_newest`, flush on shutdown with a timeout), `publisher_stream.c` (stdout/file JSONL), `publisher_kafka.c` (librdkafka; key = `sensor.id`; headers `schema`, `content-type`; passthrough of `publish.kafka.properties`; delivery-report callback → metrics).
+- [x] Serializer golden test: C test binary builds a fixed event → JSON → compared to `tests/golden/event_basic.json` and validated by pytest against the schema.
 
 **Acceptance (GPU):** with `publish.backend=stdout`, adding the sample stream prints valid JSON Lines (validated by `tests/integration/consume_validate.py --stdin`).
+
+**Status:** done (2026-11-20). GPU: `docker logs -f … | consume_validate.py --stdin --min-events 5 --sensor-id m1-cam-0 --require-objects` → `PASS: 5 valid events (5 with objects)`; stdout carries only events; SIGTERM flushes the queue (`enqueued=11 published=11 dropped=0`) and exits 0. No GPU: `make -C src/app test` (serializer golden + publisher queue tests with a mock backend, ASan + UBSan) and pytest (golden event vs schema, `consume_validate`). **Pending M7:** the Kafka backend (`publisher_kafka.c`) compiles and is wired in, but is first exercised against a broker in the compose integration test. Timestamps are `system` until M5.
 
 ### M5 — Tracking, embeddings, timestamps
 - [ ] Tracker profiles in `gen_configs` (`nvdcf_perf`, `nvdcf_accuracy`, `nvsort`, `iou`, `none`), referencing the DeepStream sample tracker YAMLs **inside the container by path**. If a profile file is missing in the image, fail with a clear message.
