@@ -4,6 +4,8 @@
 All notable changes are documented here (format: Keep a Changelog; versioning: SemVer).
 
 ## [Unreleased]
+
+## [0.1.0] - 2026-11-20
 ### Added
 - M8 documentation and release hygiene: product README with a verified quick start,
   `docs/MODELS.md` (bring your own model), `docs/TROUBLESHOOTING.md`,

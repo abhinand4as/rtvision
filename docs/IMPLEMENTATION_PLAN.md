@@ -159,9 +159,9 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 - [x] README quick start (build, run, add camera, see events), model onboarding guide, troubleshooting.
 - [x] `examples/consumer/occupancy.py` (per-camera person count from events).
 - [x] `docs/LICENSING.md` release checklist completed; `THIRD_PARTY_NOTICES.md` regenerated (`tools/ci/third_party_report.py` lists the apt and pip packages actually installed in the image with their licences). Three items are owner decisions (see below).
-- [ ] Tag `v0.1.0`. **PENDING-OWNER**
+- [x] Tag `v0.1.0` (annotated, local; pushing is a separate decision of the owner).
 
-**Status:** done except the tag (2026-11-20).
+**Status:** done (2026-11-20), tagged `v0.1.0`.
 - README quick start executed verbatim from a fresh clone with an empty engine cache: `export.sh` (also creating its venv from scratch, 60 s, byte-identical ONNX), `docker compose up -d --build`, the `/ready` wait loop, stream add, events printed for the whole sample video. Found and documented: DeepStream removes a file stream by itself at end-of-file, so the final remove answers `No record found` (harmless).
 - `docs/MODELS.md` (bring your own model, written from the RF-DETR onboarding) and `docs/TROUBLESHOOTING.md` (exit codes, startup, streams, events, shutdown; every metric/config name checked against the code).
 - `examples/consumer/print_events.py` and `occupancy.py` (stdin JSON Lines, standard library only); `occupancy.py` verified on live Kafka output of `rfdetr-s-people` (smoothed counts, 0 after the stream ended). Unit tests in `tests/python/test_examples.py`.

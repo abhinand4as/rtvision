@@ -43,7 +43,7 @@ Used on the host to export the default model (`tools/export/rfdetr`, own virtual
 | certifi, tqdm (transitive) | | MPL-2.0 (file-level copyleft; unmodified) | https://github.com/certifi/python-certifi |
 
 <!-- BEGIN GENERATED: tools/ci/third_party_report.py -->
-## Generated report: contents of `rtvision:local` (image `0326e9b3bf05`)
+## Generated report: contents of `rtvision:local` (image `587a5b713605`)
 
 Base image `nvcr.io/nvidia/deepstream:9.1-samples-multiarch`. Regenerate after any change to the Dockerfile or the Python dependencies: `python3 tools/ci/third_party_report.py --image rtvision:local --write`.
 
@@ -63,7 +63,7 @@ Base image `nvcr.io/nvidia/deepstream:9.1-samples-multiarch`. Regenerate after a
 | PyYAML | 6.0.3 | MIT | https://pyyaml.org/ |
 | referencing | 0.37.0 | MIT | https://github.com/python-jsonschema/referencing |
 | rpds-py | 2026.9.1 | MIT | https://github.com/crate-py/rpds |
-| rtvision-tools | 0.1.0.dev0 | Apache-2.0 |  |
+| rtvision-tools | 0.1.0 | Apache-2.0 |  |
 | typing_extensions | 4.16.0 | PSF-2.0 | https://github.com/python/typing_extensions |
 
 ### apt packages added by `docker/Dockerfile` on top of the base image (0)

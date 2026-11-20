@@ -55,7 +55,7 @@
 #include "task_registry.h"
 #include "timestamps.h"
 
-#define RTVISION_VERSION "0.1.0-dev"
+#define RTVISION_VERSION "0.1.0"
 #define EXIT_RUNTIME_ERROR 1
 #define EXIT_USAGE_ERROR 2
 

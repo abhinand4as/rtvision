@@ -79,7 +79,7 @@ Verify every licence in this table against the installed package metadata before
 
 ## 8. Release checklist
 
-Status for `v0.1.0` (checked 2026-11-20). Items marked **OWNER** need the project owner's decision.
+Status for `v0.1.0` (checked 2026-11-20): all items complete; the owner decisions were taken on 2026-11-20.
 
 - [x] `tools/ci/check_spdx.py` passes; forbidden-file check passes. (128 files; 0 violations; also enforced in CI.)
 - [x] `NOTICE` lists every RT-CV-derived file; each has a modification notice. (6 files: `main.c`, `perf.c`, `Makefile`, `timestamps.c`, `embeddings.c`, `ota.c`; the verbatim NVIDIA line is enforced by `check_spdx.py`.)

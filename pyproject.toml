@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rtvision-tools"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Configuration generator and entrypoint for the RTVision detection microservice"
 readme = "README.md"
 license = { text = "Apache-2.0" }
