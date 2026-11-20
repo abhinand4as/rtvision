@@ -59,6 +59,9 @@ For every file ported from RT-CV:
 | jsonschema | MIT | tools | pip |
 | onnx | Apache-2.0 | tools (shape inspection) | pip |
 | pytest, ruff | MIT | dev only | pip |
+| Transitive Python deps of the above (MarkupSafe, attrs, referencing, rpds-py, jsonschema-specifications, numpy, protobuf, ml_dtypes, typing_extensions) | BSD-3-Clause, MIT, Apache-2.0, **PSF-2.0**, **0BSD**, **Zlib**, CC0-1.0 | tools (pulled in by Jinja2, jsonschema, onnx) | pip |
+
+**Allow-list decision (2026-11-20, project owner):** the permissive licences **PSF-2.0** (typing_extensions), **0BSD** and **Zlib** (bundled in numpy), which reach the image only as transitive dependencies of the allow-listed `onnx` and `jsonschema`, are approved. The exact packages and versions are in `THIRD_PARTY_NOTICES.md`.
 
 Adding anything not on this list, especially GPL/AGPL/SSPL/BUSL/"non-commercial", requires asking the project owner first. LGPL libraries must stay dynamically linked and unmodified (or modifications published).
 

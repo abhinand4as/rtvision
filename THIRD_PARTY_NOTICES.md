@@ -22,6 +22,6 @@ This file is **regenerated before each release** by `tools/ci/third_party_report
 | typing_extensions (onnx) | 4.16.0 | PSF-2.0 † | https://github.com/python/typing_extensions |
 | NVIDIA DeepStream SDK, TensorRT, CUDA | base image | NVIDIA proprietary (EULA) | https://developer.nvidia.com/deepstream-sdk |
 
-† Licence id not on the allow-list in `docs/LICENSING.md` §6 (all permissive). Pending confirmation by the project owner.
+† Licence id added to the allow-list by the project owner on 2026-11-20 (`docs/LICENSING.md` §6).
 
 Not distributed by this project: model weights, DeepStream sample models/streams, Ultralytics software.
