@@ -84,12 +84,14 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 **Status:** done (2026-11-20). Both acceptance commands pass; `pytest -q` and `ruff` pass.
 
 ### M1 — Pipeline skeleton on DeepStream (sample model)
-- [ ] `docker/Dockerfile` (two stages, base `ARG DS_IMAGE=nvcr.io/nvidia/deepstream:9.1-samples-multiarch`), build deps: `librdkafka-dev libsoup-3.0-dev libjson-glib-dev`; runtime: `librdkafka1 libsoup-3.0-0` + Python tools.
-- [ ] `src/app/main.c`: derived from RT-CV `main()` minus the non-public APIs (see CLAUDE.md). CLI: `-c <ds-main.ini> -a <app.ini> [--log-level]`. Force TCP for RTSP. `buffer-pool-size=16` on streammux. SIGINT/SIGTERM → EOS → clean shutdown.
-- [ ] `src/app/probe.c` minimal: count frames and objects per stream; log every N frames at debug level.
-- [ ] Hand-written `ds-main.ini` using the in-container sample detector (`samples/configs/deepstream-app/config_infer_primary.txt`, ResNet TrafficCamNet) — **referenced by path, not copied into the repo**.
+- [x] `docker/Dockerfile` (two stages, base `ARG DS_IMAGE=nvcr.io/nvidia/deepstream:9.1-samples-multiarch`), build deps: `librdkafka-dev libsoup-3.0-dev libjson-glib-dev`; runtime: `librdkafka1 libsoup-3.0-0` + Python tools.
+- [x] `src/app/main.c`: derived from RT-CV `main()` minus the non-public APIs (see CLAUDE.md). CLI: `-c <ds-main.ini> -a <app.ini> [--log-level]`. Force TCP for RTSP. `buffer-pool-size=16` on streammux. SIGINT/SIGTERM → EOS → clean shutdown.
+- [x] `src/app/probe.c` minimal: count frames and objects per stream; log every N frames at debug level.
+- [x] Hand-written `ds-main.ini` using the in-container sample detector (`samples/configs/deepstream-app/config_infer_primary.txt`, ResNet TrafficCamNet) — **referenced by path, not copied into the repo**.
 
 **Acceptance (GPU):** the container starts with 0 streams; `POST /api/v1/stream/add` with `file:///opt/nvidia/deepstream/deepstream/samples/streams/sample_1080p_h264.mp4` → FPS logs appear; `stream/remove` works; SIGTERM exits 0.
+
+**Status:** done (2026-11-20) on RTX 5070 Ti Laptop / driver 595.99 / `deepstream:9.1-samples-multiarch`. 0 streams at start; add → HTTP 200, ~30 FPS, 16–27 objects/frame; remove → HTTP 200, `active_sources=0`; `docker stop` → exit 0 in 8.6 s via the shutdown watchdog (DeepStream 9.1 teardown hang, `docs/DEVIATIONS.md` #8). Hand-written configs: `config/dev/ds-main.m1.ini`, `config/dev/app.m1.ini`. Python tools in the runtime image follow in M3.
 
 ### M2 — Parser library
 - [ ] `core/`: implement `yolo_e2e`, `yolo_raw` (both layouts, auto-detect by shape), `detr` (box formats `cxcywh_norm`, `xyxy_norm`, `xyxy_px`; activations `sigmoid`, `softmax`, `none`; optional background class), `efficient_nms`.

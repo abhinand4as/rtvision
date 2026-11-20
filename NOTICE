@@ -13,14 +13,14 @@ Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 Licensed under the Apache License, Version 2.0.
 
 Derived files (each carries the original notice and a modification notice):
-  (to be filled in by the implementer, e.g.)
   - src/app/main.c          <- src/metropolis_perception_app.c (main, lifecycle)
-  - src/app/probe.c         <- src/metropolis_perception_app.c (analytics probe)
-  - src/app/embeddings.c    <- src/metropolis_perception_app.c (ReID cache)
-  - src/app/ota.c           <- src/metropolis_perception_app.c (OTA model update)
   - src/app/perf.c          <- src/metropolis_perception_app.c (perf callback)
-  - src/app/timestamps.c    <- src/perception_utc.c
   - src/app/Makefile        <- src/Makefile
+  Planned (added to this list when ported):
+  - src/app/probe.c         <- src/metropolis_perception_app.c (analytics probe; M4/M5)
+  - src/app/embeddings.c    <- src/metropolis_perception_app.c (ReID cache; M5)
+  - src/app/ota.c           <- src/metropolis_perception_app.c (OTA model update; M6)
+  - src/app/timestamps.c    <- src/perception_utc.c (M5)
 
 -------------------------------------------------------------------------------
 Runtime platform
