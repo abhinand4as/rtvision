@@ -75,11 +75,13 @@ perceptra/
 Each milestone ends with its **acceptance** commands passing. Mark items `[x]` when done, or `PENDING-GPU` where a GPU is needed but unavailable.
 
 ### M0 — Repository scaffolding and licensing
-- [ ] Create the layout above (empty modules with SPDX headers).
-- [ ] `LICENSE` (Apache-2.0 full text, from `LICENSE` in this spec package), `NOTICE`, `THIRD_PARTY_NOTICES.md`, `.gitignore`, `CONTRIBUTING.md` (DCO sign-off), `SECURITY.md`, `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1, referenced by URL).
-- [ ] CI skeleton: `ruff`, `clang-format --dry-run`, SPDX header check script `tools/ci/check_spdx.py`, forbidden-file check (weights/videos).
+- [x] Create the layout above (empty modules with SPDX headers).
+- [x] `LICENSE` (Apache-2.0 full text, from `LICENSE` in this spec package), `NOTICE`, `THIRD_PARTY_NOTICES.md`, `.gitignore`, `CONTRIBUTING.md` (DCO sign-off), `SECURITY.md`, `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1, referenced by URL).
+- [x] CI skeleton: `ruff`, `clang-format --dry-run`, SPDX header check script `tools/ci/check_spdx.py`, forbidden-file check (weights/videos).
 
 **Acceptance:** `python tools/ci/check_spdx.py` passes; `git ls-files | grep -E '\.(onnx|pt|engine|mp4)$'` is empty.
+
+**Status:** done (2026-11-20). Both acceptance commands pass; `pytest -q` and `ruff` pass.
 
 ### M1 — Pipeline skeleton on DeepStream (sample model)
 - [ ] `docker/Dockerfile` (two stages, base `ARG DS_IMAGE=nvcr.io/nvidia/deepstream:9.1-samples-multiarch`), build deps: `librdkafka-dev libsoup-3.0-dev libjson-glib-dev`; runtime: `librdkafka1 libsoup-3.0-0` + Python tools.
