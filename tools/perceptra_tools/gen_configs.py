@@ -394,6 +394,8 @@ def generate(ctx: GenContext) -> dict[str, str]:
         model=model,
         family=family,
         license=ctx.accepted_license or model["license"]["spdx"],
+        precision=precision(ctx),
+        hot_swap_file=svc["inference"].get("hot_swap_file") or "",
         pub=pub,
         queue=pub["queue"],
         kafka=kafka,

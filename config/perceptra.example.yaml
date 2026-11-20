@@ -12,6 +12,7 @@ service:
 inference:
   interval: 0
   precision: null
+  hot_swap_file: null            # e.g. /opt/perceptra/config/hot-swap.ini
 
 tracker:
   profile: nvdcf_perf
