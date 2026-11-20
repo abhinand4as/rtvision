@@ -1,6 +1,359 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 <PROJECT_OWNER>
-"""Render perceptra.yaml + model.yaml into ds-main.ini, pgie.ini, app.ini, parser.ini.
+"""Render ``perceptra.yaml`` + ``model.yaml`` into the DeepStream and Perceptra config files.
 
-Placeholder: implemented in milestone M3.
+Generated files (docs/CONFIGURATION.md "Generated artefacts"):
+
+* ``ds-main.ini``     deepstream-app main config (sources, streammux, PGIE, tracker, sinks)
+* ``pgie.ini``        nvinfer config (not for ``family: builtin``)
+* ``parser.ini``      read by libperceptra_parsers.so (not for ``family: builtin``)
+* ``app.ini``         read by the ``perceptra`` binary
+* ``kafka.properties`` librdkafka passthrough properties (kafka backend only)
+
+``generate()`` is pure (returns file name -> content) so it can be golden-tested; filesystem side
+effects (writing, engine-cache symlinks) live in ``write_files()`` / ``prepare_engine_cache()``.
 """
+
+from __future__ import annotations
+
+import math
+import shutil
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import jinja2
+
+from .schemas import ConfigError
+
+DS_ROOT = "/opt/nvidia/deepstream/deepstream"
+PARSER_LIB = "/opt/perceptra/lib/libperceptra_parsers.so"
+
+TRACKER_PROFILES = {
+    "nvdcf_perf": "config_tracker_NvDCF_perf.yml",
+    "nvdcf_accuracy": "config_tracker_NvDCF_accuracy.yml",
+    "nvsort": "config_tracker_NvSORT.yml",
+    "iou": "config_tracker_IOU.yml",
+}
+NETWORK_MODE = {"fp32": 0, "int8": 1, "fp16": 2}
+COLOR_FORMAT = {"RGB": 0, "BGR": 1, "GRAY": 2}
+# resize -> (maintain-aspect-ratio, symmetric-padding)
+RESIZE = {"letterbox_center": (1, 1), "letterbox_topleft": (1, 0), "stretch": (0, 0)}
+PARSE_FUNC = {
+    "yolo_e2e": "NvDsInferParsePerceptra_YoloE2E",
+    "yolo_raw": "NvDsInferParsePerceptra_YoloRaw",
+    "detr": "NvDsInferParsePerceptra_Detr",
+    "efficient_nms": "NvDsInferParsePerceptra_EfficientNms",
+}
+# nvinfer clustering: yolo_raw needs NMS (2); the others are already de-duplicated (4 = none).
+CLUSTER_MODE = {"yolo_raw": 2}
+CLUSTER_NONE = 4
+
+
+@dataclass
+class GenContext:
+    service: dict[str, Any]  # validated + default-filled perceptra.yaml
+    model: dict[str, Any]  # validated + default-filled model.yaml
+    model_dir: Path  # directory of model.yaml (relative model files resolve here)
+    engine_dir: Path  # TensorRT engine cache root
+    out_dir: Path  # where the generated files are written
+    trt_version: str = "unknown"
+    ds_root: str = DS_ROOT
+    parser_lib: str = PARSER_LIB
+    check_files: bool = False  # True inside the container: referenced files must exist
+    accepted_license: str | None = None
+
+
+def _resolve(model_dir: Path, p: str) -> Path:
+    path = Path(p)
+    return path if path.is_absolute() else model_dir / path
+
+
+def is_builtin(model: dict[str, Any]) -> bool:
+    return model["output"]["family"] == "builtin"
+
+
+def load_labels(ctx: GenContext) -> list[str] | None:
+    """Labels (line index = class id), or None if the file is not readable here."""
+    path = _resolve(ctx.model_dir, ctx.model["files"]["labels"])
+    if not path.is_file():
+        if ctx.check_files:
+            raise ConfigError(f"model.files.labels: '{path}' not found")
+        return None
+    lines = path.read_text(encoding="utf-8").splitlines()
+    while lines and not lines[-1].strip():
+        lines.pop()
+    return [line.strip() for line in lines]
+
+
+def _class_ids(ctx: GenContext, labels: list[str] | None) -> tuple[list[int], dict[int, float]]:
+    """(keep ids, per-class thresholds by id) from classes.keep / thresholds.per_class."""
+    classes = ctx.model.get("classes", {})
+    keep = classes.get("keep") or []
+    per_class = classes.get("thresholds", {}).get("per_class") or {}
+    if (keep or per_class) and labels is None:
+        raise ConfigError(
+            "model.classes: keep/per_class need the labels file, which is not readable here "
+            f"({ctx.model['files']['labels']})"
+        )
+    index = {name: i for i, name in enumerate(labels or [])}
+    keep_ids = []
+    for i, name in enumerate(keep):
+        if name not in index:
+            raise ConfigError(f"model.classes.keep[{i}]: label '{name}' not in labels file")
+        keep_ids.append(index[name])
+    thr = {}
+    for name, value in per_class.items():
+        if name not in index:
+            raise ConfigError(
+                f"model.classes.thresholds.per_class.{name}: label not in labels file"
+            )
+        thr[index[name]] = value
+    return sorted(set(keep_ids)), dict(sorted(thr.items()))
+
+
+def precision(ctx: GenContext) -> str:
+    return ctx.service["inference"].get("precision") or ctx.model["precision"]
+
+
+def engine_cache_dir(ctx: GenContext) -> Path:
+    return ctx.engine_dir / f"{ctx.model['name']}-trt{ctx.trt_version}"
+
+
+def engine_paths(ctx: GenContext) -> tuple[Path, Path]:
+    """(onnx-file as seen by nvinfer, model-engine-file).
+
+    nvinfer always serialises a freshly built engine next to the *real path* of its
+    ``onnx-file`` as ``<onnx-file>_b<batch>_gpu<id>_<precision>.engine``
+    (nvdsinfer_model_builder.cpp; symlinks are resolved). To cache engines outside the
+    (read-only) models volume, nvinfer is pointed at a COPY of the model files inside a
+    per-model, per-TensorRT-version cache dir (see prepare_engine_cache()).
+    """
+    files = ctx.model["files"]
+    svc = ctx.service["service"]
+    onnx = _resolve(ctx.model_dir, files["onnx"])
+    if files.get("engine"):
+        return onnx, _resolve(ctx.model_dir, files["engine"])
+    cache = engine_cache_dir(ctx)
+    onnx_copy = cache / onnx.name
+    engine = Path(f"{onnx_copy}_b{svc['max_streams']}_gpu{svc['gpu_id']}_{precision(ctx)}.engine")
+    return onnx_copy, engine
+
+
+def prepare_engine_cache(ctx: GenContext) -> list[str]:
+    """Copies the model files (ONNX plus external-data files, which must sit next to it) into
+    the engine cache dir. A file is copied again only if its size or mtime changed; when any file
+    changes, cached engines in that dir are deleted so a stale engine is never used.
+    Returns the names of the copied files."""
+    if is_builtin(ctx.model) or ctx.model["files"].get("engine"):
+        return []
+    cache = engine_cache_dir(ctx)
+    cache.mkdir(parents=True, exist_ok=True)
+    src_dir = _resolve(ctx.model_dir, ctx.model["files"]["onnx"]).parent
+    copied = []
+    for src in sorted(src_dir.iterdir()):
+        if not src.is_file() or src.suffix == ".engine" or src.name == "model.yaml":
+            continue
+        dst = cache / src.name
+        st = src.stat()
+        if dst.is_file() and not dst.is_symlink():
+            dt = dst.stat()
+            if dt.st_size == st.st_size and int(dt.st_mtime) == int(st.st_mtime):
+                continue
+        if dst.is_symlink() or dst.exists():
+            dst.unlink()
+        tmp = dst.with_name(dst.name + ".tmp")
+        shutil.copy2(src, tmp)
+        tmp.replace(dst)
+        copied.append(src.name)
+    if copied:
+        for stale in cache.glob("*.engine"):
+            stale.unlink()
+    return copied
+
+
+def _tiler(n: int) -> tuple[int, int]:
+    cols = math.ceil(math.sqrt(n))
+    return math.ceil(n / cols), cols
+
+
+def kafka_topic(service: dict[str, Any], model: dict[str, Any]) -> str:
+    topic = service["publish"].get("kafka", {}).get("topic")
+    if topic:
+        return topic
+    return model.get("messaging", {}).get("topic") or f"perceptra.{model['name']}"
+
+
+def _env() -> jinja2.Environment:
+    return jinja2.Environment(
+        loader=jinja2.PackageLoader("perceptra_tools", "templates"),
+        undefined=jinja2.StrictUndefined,
+        keep_trailing_newline=True,
+        trim_blocks=True,
+        lstrip_blocks=True,
+        autoescape=False,
+    )
+
+
+def _ini_bool(v: bool) -> int:
+    return 1 if v else 0
+
+
+def generate(ctx: GenContext) -> dict[str, str]:
+    """Returns {file name: content}. Raises ConfigError on inconsistent configuration."""
+    svc, model = ctx.service, ctx.model
+    s = svc["service"]
+    batch = s["max_streams"]
+    family = model["output"]["family"]
+    builtin = is_builtin(model)
+    out_dir = ctx.out_dir
+
+    if model["task"] != "detect":
+        raise ConfigError(
+            f"model.task: '{model['task']}' is not supported in this version (v1 supports: detect)"
+        )
+
+    labels = load_labels(ctx)
+    nc = model["output"]["num_classes"]
+    if labels is not None and len(labels) != nc:
+        raise ConfigError(
+            f"model.output.num_classes: {nc} but the labels file has {len(labels)} lines"
+        )
+    keep_ids, per_class_thr = _class_ids(ctx, labels)
+
+    trk = svc["tracker"]
+    tracker_file = None
+    if trk["profile"] != "none":
+        tracker_file = (
+            f"{ctx.ds_root}/samples/configs/deepstream-app/" + TRACKER_PROFILES[trk["profile"]]
+        )
+        if ctx.check_files and not Path(tracker_file).is_file():
+            raise ConfigError(
+                f"tracker.profile: '{trk['profile']}' needs {tracker_file}, which is missing "
+                "from this DeepStream image"
+            )
+    if trk["reid"] and trk["profile"] != "nvdcf_accuracy":
+        raise ConfigError("tracker.reid: true requires tracker.profile: nvdcf_accuracy")
+
+    outputs = svc["outputs"]
+    visual = bool(outputs["display"] or outputs["file"] or outputs["rtsp"])
+    rows, cols = _tiler(batch)
+
+    files: dict[str, str] = {}
+    env = _env()
+    pgie_path = out_dir / "pgie.ini"
+    common = {"service": svc, "model": model, "s": s, "batch": batch}
+
+    if builtin:
+        nvinfer_config = model["files"].get("nvinfer_config")
+        if not nvinfer_config:
+            raise ConfigError("model.files.nvinfer_config: required for output.family 'builtin'")
+        if ctx.check_files and not Path(nvinfer_config).is_file():
+            raise ConfigError(f"model.files.nvinfer_config: '{nvinfer_config}' not found")
+        pgie_config = nvinfer_config
+    else:
+        pgie_config = str(pgie_path)
+        onnx_file, engine_file = engine_paths(ctx)
+        maintain, symmetric = RESIZE[model["input"]["resize"]]
+        inp = model["input"]
+        prec = precision(ctx)
+        calib = model["files"].get("int8_calibration")
+        filter_out = [i for i in range(nc) if i not in keep_ids] if keep_ids else []
+        files["pgie.ini"] = env.get_template("pgie.ini.j2").render(
+            **common,
+            onnx_file=onnx_file,
+            engine_file=engine_file,
+            labels_file=_resolve(ctx.model_dir, model["files"]["labels"]),
+            network_mode=NETWORK_MODE[prec],
+            precision=prec,
+            calib_file=_resolve(ctx.model_dir, calib) if calib else None,
+            offsets=";".join(_num(m) for m in inp["mean"]),
+            scale=_num(inp["scale"]),
+            color_format=COLOR_FORMAT[inp["color"]],
+            maintain_aspect_ratio=maintain,
+            symmetric_padding=symmetric,
+            num_classes=nc,
+            parse_func=PARSE_FUNC[family],
+            parser_lib=ctx.parser_lib,
+            cluster_mode=CLUSTER_MODE.get(family, CLUSTER_NONE),
+            filter_out=";".join(map(str, filter_out)),
+            classes=model.get("classes", {}),
+            per_class_thr=per_class_thr,
+            nms=family in CLUSTER_MODE,
+            num=_num,
+        )
+        out = model["output"]
+        files["parser.ini"] = env.get_template("parser.ini.j2").render(
+            family=family,
+            layers=",".join(out.get("layers") or []),
+            box_format=out.get("box_format"),
+            activation=out.get("activation"),
+            has_background_class=str(bool(out["has_background_class"])).lower(),
+            num_classes=nc,
+            allowed=",".join(map(str, keep_ids)),
+            topk=model.get("classes", {}).get("topk", 300),
+        )
+
+    files["ds-main.ini"] = env.get_template("ds_main.ini.j2").render(
+        **common,
+        obs=svc["observability"],
+        src=s["sources"],
+        mux=s["streammux"],
+        pgie_config=pgie_config,
+        interval=svc["inference"]["interval"],
+        tracker=trk,
+        tracker_file=tracker_file,
+        ds_root=ctx.ds_root,
+        visual=visual,
+        rows=rows,
+        cols=cols,
+        outputs=outputs,
+        b=_ini_bool,
+    )
+
+    pub = svc["publish"]
+    kafka = pub.get("kafka") or {}
+    kafka_props_path = out_dir / "kafka.properties" if pub["backend"] == "kafka" else None
+    files["app.ini"] = env.get_template("app.ini.j2").render(
+        model=model,
+        family=family,
+        license=ctx.accepted_license or model["license"]["spdx"],
+        pub=pub,
+        queue=pub["queue"],
+        kafka=kafka,
+        topic=kafka_topic(svc, model) if pub["backend"] == "kafka" else "",
+        kafka_props_path=kafka_props_path or "",
+        file_path=(pub.get("file") or {}).get("path", ""),
+        ts=svc["timestamps"],
+        obs=svc["observability"],
+        service_name=s["name"],
+        max_streams=batch,
+        b=lambda v: "true" if v else "false",
+    )
+    if kafka_props_path:
+        props = kafka.get("properties") or {}
+        lines = ["# Generated by perceptra-run: librdkafka properties (publish.kafka.properties)."]
+        lines += [f"{k}={v}" for k, v in sorted(props.items())]
+        files["kafka.properties"] = "\n".join(lines) + "\n"
+    return files
+
+
+def _num(v: float | int) -> str:
+    """Stable number formatting for INI files (no exponent, no trailing zeros)."""
+    if isinstance(v, bool):
+        return str(int(v))
+    if isinstance(v, int) or float(v).is_integer():
+        return str(int(v))
+    return repr(float(v))
+
+
+def write_files(files: dict[str, str], out_dir: Path) -> list[Path]:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    written = []
+    for name, content in sorted(files.items()):
+        path = out_dir / name
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_text(content, encoding="utf-8")
+        tmp.replace(path)
+        written.append(path)
+    return written
