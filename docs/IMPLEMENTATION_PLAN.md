@@ -94,12 +94,14 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 **Status:** done (2026-11-20) on RTX 5070 Ti Laptop / driver 595.99 / `deepstream:9.1-samples-multiarch`. 0 streams at start; add → HTTP 200, ~30 FPS, 16–27 objects/frame; remove → HTTP 200, `active_sources=0`; `docker stop` → exit 0 in 8.6 s via the shutdown watchdog (DeepStream 9.1 teardown hang, `docs/DEVIATIONS.md` #8). Hand-written configs: `config/dev/ds-main.m1.ini`, `config/dev/app.m1.ini`. Python tools in the runtime image follow in M3.
 
 ### M2 — Parser library
-- [ ] `core/`: implement `yolo_e2e`, `yolo_raw` (both layouts, auto-detect by shape), `detr` (box formats `cxcywh_norm`, `xyxy_norm`, `xyxy_px`; activations `sigmoid`, `softmax`, `none`; optional background class), `efficient_nms`.
-- [ ] Common post-steps: score threshold per class, class allow-list, clamp to network size, drop boxes < 1 px, top-k.
-- [ ] `ds_adapter.cpp`: exports `NvDsInferParsePerceptra_YoloE2E`, `_YoloRaw`, `_Detr`, `_EfficientNms`; reads `parser.ini` once (thread-safe `std::call_once`) from `PERCEPTRA_PARSER_CONFIG`.
-- [ ] Unit tests with synthetic tensors per family (including edge cases: empty output, all below threshold, out-of-range class, NaN scores, transposed layout).
+- [x] `core/`: implement `yolo_e2e`, `yolo_raw` (both layouts, auto-detect by shape), `detr` (box formats `cxcywh_norm`, `xyxy_norm`, `xyxy_px`; activations `sigmoid`, `softmax`, `none`; optional background class), `efficient_nms`.
+- [x] Common post-steps: score threshold per class, class allow-list, clamp to network size, drop boxes < 1 px, top-k.
+- [x] `ds_adapter.cpp`: exports `NvDsInferParsePerceptra_YoloE2E`, `_YoloRaw`, `_Detr`, `_EfficientNms`; reads `parser.ini` once (thread-safe `std::call_once`) from `PERCEPTRA_PARSER_CONFIG`.
+- [x] Unit tests with synthetic tensors per family (including edge cases: empty output, all below threshold, out-of-range class, NaN scores, transposed layout).
 
 **Acceptance:** `make -C src/parsers test-core` passes without DeepStream; `make -C src/parsers` builds `libperceptra_parsers.so` in the container.
+
+**Status:** done (2026-11-20). `make -C src/parsers test-core`: 15/15 pass on the host (GCC 11, no DeepStream) and in the image (GCC 13), under ASan + UBSan. In the Docker build stage `make -C src/parsers test` also runs 5 adapter tests (by-name layer lookup, nvinfer thresholds, shape error → `false`, family mismatch, INT32 conversion) and builds `libperceptra_parsers.so`, which exports exactly the 4 `NvDsInferParsePerceptra_*` symbols and is installed at `/opt/perceptra/lib/`. Accuracy against real models is verified with user-supplied ONNX files in M7.
 
 ### M3 — Configuration system (`perceptra-run`)
 - [ ] `schemas/service_config.schema.json`, `schemas/model.schema.json` (per `docs/CONFIGURATION.md`).

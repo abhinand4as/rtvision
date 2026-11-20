@@ -5,6 +5,11 @@ All notable changes are documented here (format: Keep a Changelog; versioning: S
 
 ## [Unreleased]
 ### Added
+- M2 parser library `libperceptra_parsers.so`: pure C++17 core (`src/parsers/core/`) with the
+  `yolo_e2e`, `yolo_raw` (both layouts), `detr` (4 box formats; sigmoid/softmax/none; background
+  column) and `efficient_nms` decoders, common post-steps and a strict `parser.ini` reader; DeepStream
+  adapter exporting `NvDsInferParsePerceptra_{YoloE2E,YoloRaw,Detr,EfficientNms}`; own header-only test
+  harness with 15 core and 5 adapter tests (ASan + UBSan); CI job `parser-core`.
 - M1 pipeline skeleton on DeepStream 9.1: `perceptra` binary (`src/app/main.c`, derived from RT-CV
   `main()`) with `-c/-a/--log-level/--no-force-tcp/--shutdown-timeout`, SIGINT/SIGTERM handling,
   force-TCP for REST-added RTSP sources and `buffer-pool-size=16`; per-stream frame/object counters
