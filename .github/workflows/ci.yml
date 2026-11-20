@@ -60,3 +60,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: make test-core
         run: make -C src/parsers test-core
+
+  app-unit:
+    # Event serializer golden test + publisher queue tests: GLib only, no DeepStream/GPU.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: install GLib headers
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libglib2.0-dev
+      - name: make test (serializer + publisher)
+        run: make -C src/app test

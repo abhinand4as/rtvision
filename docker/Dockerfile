@@ -34,7 +34,8 @@ COPY src/parsers/ src/parsers/
 # Parser library + its unit and adapter tests (CPU only, no GPU needed at build time).
 RUN make -C src/parsers clean && make -C src/parsers test && make -C src/parsers all
 COPY src/app/ src/app/
-RUN make -C src/app -j"$(nproc)" && make -C src/app info
+COPY tests/golden/event_basic.json tests/golden/event_basic.json
+RUN make -C src/app test && make -C src/app -j"$(nproc)" && make -C src/app info
 
 # ---------------------------------------------------------------------------------------------
 FROM ${DS_IMAGE} AS runtime
