@@ -34,23 +34,18 @@ NVDS_VERSION ?= $(shell sed -n 's/^Version: *\([0-9]*\.[0-9]*\).*/\1/p' $(DS_ROO
 CUDA_VER ?= $(shell ls -d /usr/local/cuda-*.* 2>/dev/null | sed 's|.*/cuda-||' | sort -V | tail -1)
 LIB_INSTALL_DIR ?= /opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/lib/
 
-ifeq ($(NVDS_VERSION),)
-  $(error DeepStream not found under $(DS_ROOT); build inside the DeepStream container)
-endif
-ifeq ($(CUDA_VER),)
-  $(error No /usr/local/cuda-X.Y found)
-endif
-
 TARGET_DEVICE := $(shell gcc -dumpmachine | cut -f1 -d -)
 PLATFORM_FLAGS :=
 ifeq ($(TARGET_DEVICE),aarch64)
   PLATFORM_FLAGS += -DPLATFORM_TEGRA
 endif
 
-PKGS := gstreamer-1.0 gstreamer-video-1.0 x11 json-glib-1.0
+PKGS := gstreamer-1.0 gstreamer-video-1.0 x11 json-glib-1.0 gio-2.0 rdkafka
 
 # Perceptra sources (strict warnings).
-APP_SRCS := main.c app_config.c probe.c perf.c log.c ds_compat.c
+APP_SRCS := main.c app_config.c probe.c perf.c log.c ds_compat.c event_model.c \
+            event_serialize.c publisher.c publisher_stream.c publisher_kafka.c \
+            task_registry.c task_detect.c
 # DeepStream sources from the image (compiled with their own, relaxed flags).
 DS_C_SRCS := $(DS_APP_DIR)/deepstream_app.c $(DS_APP_DIR)/deepstream_app_config_parser.c \
              $(wildcard $(DS_COMMON_DIR)/src/*.c)
@@ -58,14 +53,15 @@ DS_CXX_SRCS := $(DS_APP_DIR)/deepstream_app_config_parser_yaml.cpp \
                $(wildcard $(DS_COMMON_DIR)/src/deepstream-yaml/*.cpp)
 
 # DeepStream headers are treated as system headers so -Werror applies to our code only.
-COMMON_FLAGS := $(PLATFORM_FLAGS) -isystem $(DS_APP_DIR) -isystem $(DS_COMMON_DIR)/includes \
+# Recursive (=) so pkg-config only runs for targets that need DeepStream/GStreamer.
+COMMON_FLAGS = $(PLATFORM_FLAGS) -isystem $(DS_APP_DIR) -isystem $(DS_COMMON_DIR)/includes \
                 -isystem $(DS_INCLUDES) -isystem /usr/local/cuda-$(CUDA_VER)/include \
                 $(shell pkg-config --cflags $(PKGS))
-APP_CFLAGS := -std=gnu11 -O2 -g -Wall -Wextra -Werror $(COMMON_FLAGS)
-DS_CFLAGS := -O2 -g -w $(COMMON_FLAGS)
-DS_CXXFLAGS := -std=c++17 -O2 -g -w $(COMMON_FLAGS)
+APP_CFLAGS = -std=gnu11 -O2 -g -Wall -Wextra -Werror $(COMMON_FLAGS)
+DS_CFLAGS = -O2 -g -w $(COMMON_FLAGS)
+DS_CXXFLAGS = -std=c++17 -O2 -g -w $(COMMON_FLAGS)
 
-LIBS := -L/usr/local/cuda-$(CUDA_VER)/lib64/ -lcudart \
+LIBS = -L/usr/local/cuda-$(CUDA_VER)/lib64/ -lcudart \
         -L$(LIB_INSTALL_DIR) -lnvdsgst_meta -lnvds_meta -lnvdsgst_helper -lnvdsgst_customhelper \
         -lnvdsgst_smartrecord -lnvds_utils -lnvds_msgbroker -lnvds_logger -lnvbufsurface \
         -lyaml-cpp -lgstrtspserver-1.0 -lm -ldl -lpthread -Wl,-rpath,$(LIB_INSTALL_DIR) \
@@ -75,9 +71,47 @@ APP_OBJS := $(APP_SRCS:%.c=$(BUILD_DIR)/app/%.o)
 DS_OBJS := $(DS_C_SRCS:$(DS_ROOT)/%.c=$(BUILD_DIR)/ds/%.o) \
            $(DS_CXX_SRCS:$(DS_ROOT)/%.cpp=$(BUILD_DIR)/ds/%.o)
 
-.PHONY: all clean info
+.PHONY: all clean info check-ds test test-serialize test-publisher update-golden
 
-all: $(APP)
+all: check-ds $(APP)
+
+check-ds:
+	@test -n "$(NVDS_VERSION)" || { echo "DeepStream not found under $(DS_ROOT): build inside" \
+	  "the DeepStream container (test-serialize needs only GLib)" >&2; exit 1; }
+	@test -n "$(CUDA_VER)" || { echo "No /usr/local/cuda-X.Y found" >&2; exit 1; }
+
+# ---- serializer golden test: GLib only, no DeepStream/GPU (CI) ----------------------------
+GOLDEN_EVENT ?= ../../tests/golden/event_basic.json
+SERIALIZE_SRCS := tests/test_serialize.c event_serialize.c event_model.c
+SANITIZE ?= -fsanitize=address,undefined -fno-sanitize-recover=all
+GLIB_FLAGS = $(shell pkg-config --cflags --libs glib-2.0)
+
+$(BUILD_DIR)/test_serialize: $(SERIALIZE_SRCS) event_model.h event_serialize.h Makefile
+	@mkdir -p $(dir $@)
+	$(CC) -std=gnu11 -O1 -g -Wall -Wextra -Werror $(SANITIZE) -I. -o $@ $(SERIALIZE_SRCS) \
+	  $(GLIB_FLAGS) -lm
+
+# The DeepStream image sets LD_PRELOAD, which ASan refuses to run behind.
+test-serialize: $(BUILD_DIR)/test_serialize
+	env -u LD_PRELOAD ./$(BUILD_DIR)/test_serialize $(GOLDEN_EVENT)
+
+PUBLISHER_TEST_SRCS := tests/test_publisher.c publisher.c publisher_stream.c event_serialize.c \
+                       event_model.c log.c
+GIO_FLAGS = $(shell pkg-config --cflags --libs gio-2.0)
+
+$(BUILD_DIR)/test_publisher: $(PUBLISHER_TEST_SRCS) publisher.h event_model.h log.h Makefile
+	@mkdir -p $(dir $@)
+	$(CC) -std=gnu11 -O1 -g -Wall -Wextra -Werror $(SANITIZE) -I. -o $@ $(PUBLISHER_TEST_SRCS) \
+	  $(GIO_FLAGS) -lm
+
+test-publisher: $(BUILD_DIR)/test_publisher
+	env -u LD_PRELOAD ./$(BUILD_DIR)/test_publisher
+
+# All GPU-free unit tests of the app.
+test: test-serialize test-publisher
+
+update-golden: $(BUILD_DIR)/test_serialize
+	env -u LD_PRELOAD ./$(BUILD_DIR)/test_serialize --write $(GOLDEN_EVENT)
 
 info:
 	@echo "NVDS_VERSION=$(NVDS_VERSION) CUDA_VER=$(CUDA_VER) TARGET_DEVICE=$(TARGET_DEVICE)"
