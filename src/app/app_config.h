@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) 2026 <PROJECT_OWNER>
+ * Copyright (c) 2026 Abhinand A S
  */
 
 /* app_config.h - settings from the generated app.ini (GKeyFile), see docs/CONFIGURATION.md.

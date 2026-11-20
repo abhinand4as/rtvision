@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) 2026 <PROJECT_OWNER>
+ * Copyright (c) 2026 Abhinand A S
  */
 
 /* event_model.h - in-memory form of one `perceptra.detection.v1` event (docs/EVENT_SCHEMA.md).

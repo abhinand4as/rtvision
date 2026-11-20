@@ -13,12 +13,12 @@ You are building **Perceptra**, a real-time multi-stream object-detection micros
 
 1. **Work milestone by milestone** (M0 → M8). Do not start a milestone until the previous one meets its acceptance criteria. After each milestone, update `CHANGELOG.md` and tick the checklist in `docs/IMPLEMENTATION_PLAN.md`.
 2. **Never commit** model weights (`*.pt`, `*.onnx`, `*.engine`, `*.plan`, `*.etlt`), videos, DeepStream binaries/headers/sources, or anything from NGC. `.gitignore` already covers these; keep it that way.
-3. **SPDX header on every source file you create:** `SPDX-License-Identifier: Apache-2.0` plus `Copyright (c) <YEAR> <PROJECT_OWNER>`. For files **derived from RT-CV**, keep NVIDIA's original copyright and SPDX lines, add `Modifications Copyright (c) <YEAR> <PROJECT_OWNER>`, and add a one-line summary of the changes at the top (Apache-2.0 §4(b)). Record every derived file in `NOTICE`.
+3. **SPDX header on every source file you create:** `SPDX-License-Identifier: Apache-2.0` plus `Copyright (c) <YEAR> Abhinand A S`. For files **derived from RT-CV**, keep NVIDIA's original copyright and SPDX lines, add `Modifications Copyright (c) <YEAR> Abhinand A S`, and add a one-line summary of the changes at the top (Apache-2.0 §4(b)). Record every derived file in `NOTICE`.
 4. **Do not invent DeepStream APIs.** Check the headers in the container (`/opt/nvidia/deepstream/deepstream/sources/includes/` and `/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps/deepstream-app/`) before calling anything. If something in this spec contradicts the headers, the headers win: document the deviation in `docs/DEVIATIONS.md`.
 5. **Probe code must never block** the streaming thread: no network I/O, no unbounded allocation, no `cudaDeviceSynchronize`, no logging per object at `info` level.
 6. **Ask the user before:** changing the repository licence; adding any dependency that is GPL/AGPL, or one whose licence is not listed in `docs/LICENSING.md`; adding a default model; publishing images to any registry.
 7. Prefer **small, reviewable commits**, one logical change each, with Conventional Commit messages (`feat:`, `fix:`, `docs:`, `test:`, `build:`, `chore:`).
-8. Keep **`<PROJECT_OWNER>` and the project name** as replaceable tokens until the user provides them. The default project name is `perceptra`, used in: the binary name, the Python package `perceptra_tools`, the metrics prefix `perceptra_`, the env prefix `PERCEPTRA_`, the image name and the schema id `perceptra.detection.v1`.
+8. The project owner is **Abhinand A S** (provided 2026-11-20; it replaced the `<PROJECT_OWNER>` token). Keep **the project name** as a replaceable token until the user provides it. The default project name is `perceptra`, used in: the binary name, the Python package `perceptra_tools`, the metrics prefix `perceptra_`, the env prefix `PERCEPTRA_`, the image name and the schema id `perceptra.detection.v1`.
 
 ## Sourcing RT-CV code (derived files)
 

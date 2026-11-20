@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """Check that every tracked file carries the required SPDX licence header.
 
 Rules (see CLAUDE.md and docs/LICENSING.md):

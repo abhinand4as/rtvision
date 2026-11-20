@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """Example consumer: per-camera person count from Perceptra events.
 
 Reads `perceptra.detection.v1` events as JSON Lines on stdin (standard library only) and prints a

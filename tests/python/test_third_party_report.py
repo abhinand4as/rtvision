@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """tools/ci/third_party_report.py: licence classification and THIRD_PARTY_NOTICES.md update.
 
 The Docker part (collecting from the image) runs on a GPU-less host too, but needs the built

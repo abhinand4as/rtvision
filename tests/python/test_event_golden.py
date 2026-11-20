@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """The serializer golden file (written by src/app/tests/test_serialize.c) and consume_validate."""
 
 from __future__ import annotations

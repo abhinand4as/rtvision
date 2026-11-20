@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) 2026 <PROJECT_OWNER>
+ * Copyright (c) 2026 Abhinand A S
  */
 
 // detr.cpp - DETR-style set prediction heads (RT-DETR, RF-DETR, D-FINE): boxes [Q, 4] and

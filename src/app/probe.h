@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) 2026 <PROJECT_OWNER>
+ * Copyright (c) 2026 Abhinand A S
  */
 
 /* probe.h - perceptra_probe: runs on the streaming thread after detection/tracking.

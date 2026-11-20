@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """Validate Perceptra events (JSON Lines) against schemas/detection_event.v1.schema.json.
 
     docker logs -f perceptra 2>/dev/null | \\

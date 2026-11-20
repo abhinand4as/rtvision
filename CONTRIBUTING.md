@@ -28,9 +28,9 @@ merged.
 - **Never copy code** from GPL/AGPL projects (for example Ultralytics). Do not add dependencies
   that are not on the allow-list in `docs/LICENSING.md` §6 without the project owner's approval.
 - **SPDX header** on every new source, config and script file:
-  `SPDX-License-Identifier: Apache-2.0` and `Copyright (c) <YEAR> <PROJECT_OWNER>`.
+  `SPDX-License-Identifier: Apache-2.0` and `Copyright (c) <YEAR> Abhinand A S`.
   Files derived from NVIDIA RT-CV keep NVIDIA's original lines, add
-  `Modifications Copyright (c) <YEAR> <PROJECT_OWNER>` plus a one-line change summary, and are
+  `Modifications Copyright (c) <YEAR> Abhinand A S` plus a one-line change summary, and are
   listed in `NOTICE`.
 
 ## Commits and pull requests

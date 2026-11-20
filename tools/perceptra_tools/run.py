@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """``perceptra-run``: validate configs, generate DeepStream configs, then exec the binary.
 
 Steps: resolve files (CLI > env > default) -> load + env-override + validate perceptra.yaml ->

@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) 2026 <PROJECT_OWNER>
+ * Copyright (c) 2026 Abhinand A S
  */
 
 // yolo_raw.cpp - anchor-free YOLO head without NMS (YOLOv8 / YOLO11, YOLO26 end2end=False):

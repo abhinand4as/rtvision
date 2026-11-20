@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
-# Modifications Copyright (c) 2026 <PROJECT_OWNER>
+# Modifications Copyright (c) 2026 Abhinand A S
 # Changes: derived from RT-CV src/Makefile; DeepStream and CUDA versions detected from the image
 # instead of hard-coded; out-of-tree objects; strict warnings for Perceptra sources only; dropped
 # frame_dump.cpp, -lnvds_batch_jpegenc, DS_VERSION_MAJOR/MINOR and the X11/json-glib-only bits.

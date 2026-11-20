@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """Create a synthetic `yolo_e2e` model directory for GPU smoke tests (no user weights needed).
 
 The ONNX graph ignores the image content and outputs fixed detections [batch, K, 6]

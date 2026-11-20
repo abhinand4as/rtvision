@@ -4,7 +4,7 @@
 ## Reporting a vulnerability
 
 Please **do not open a public issue** for security problems. Report them privately to
-<PROJECT_OWNER> (use GitHub's "Report a vulnerability" / private security advisory on this
+Abhinand A S (use GitHub's "Report a vulnerability" / private security advisory on this
 repository). Include a description, affected version or commit, and reproduction steps.
 We aim to acknowledge reports within 5 working days.
 

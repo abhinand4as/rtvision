@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """Export a pretrained RF-DETR detector (Roboflow, Apache-2.0 sizes only) to ONNX for Perceptra.
 
 Runs in its own virtualenv with the `rfdetr` package (see export.sh / README.md); never imported

@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) 2026 <PROJECT_OWNER>
+ * Copyright (c) 2026 Abhinand A S
  */
 
 /* metrics.h - Prometheus text exposition (format 0.0.4) of the metrics in ARCHITECTURE §8.

@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Modifications Copyright (c) 2026 <PROJECT_OWNER>
+ * Modifications Copyright (c) 2026 Abhinand A S
  * Changes: derived from RT-CV src/perception_utc.c (extract_utc_from_uri) and the timestamp
  * logic of src/metropolis_perception_app.c (generate_ts_rfc3339_from_ts, backward-NTP warning);
  * GStreamer macros replaced by plain nanoseconds, URI parsing made bounds-checked and returning

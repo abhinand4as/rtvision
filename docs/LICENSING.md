@@ -13,7 +13,7 @@ The whole repository is licensed under **Apache-2.0** (`LICENSE`). Reasons:
 
 For every file ported from RT-CV:
 1. Keep the original header lines, e.g. `SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.` and `SPDX-License-Identifier: Apache-2.0`.
-2. Add `Modifications Copyright (c) <YEAR> <PROJECT_OWNER>` and a short "Changes:" note (§4(b)).
+2. Add `Modifications Copyright (c) <YEAR> Abhinand A S` and a short "Changes:" note (§4(b)).
 3. List the file in `NOTICE` under "Portions derived from NVIDIA RT-CV".
 4. Do not use NVIDIA trademarks in the project name, logo or package names. Descriptive use is fine ("built on NVIDIA DeepStream").
 
@@ -61,7 +61,7 @@ For every file ported from RT-CV:
 | pytest, ruff | MIT | dev only | pip |
 | Transitive Python deps of the above (MarkupSafe, attrs, referencing, rpds-py, jsonschema-specifications, numpy, protobuf, ml_dtypes, typing_extensions) | BSD-3-Clause, MIT, Apache-2.0, **PSF-2.0**, **0BSD**, **Zlib**, CC0-1.0 | tools (pulled in by Jinja2, jsonschema, onnx) | pip |
 
-**Allow-list decision (2026-11-20, project owner):** the permissive licences **PSF-2.0** (typing_extensions), **0BSD** and **Zlib** (bundled in numpy), which reach the image only as transitive dependencies of the allow-listed `onnx` and `jsonschema`, are approved. The exact packages and versions are in `THIRD_PARTY_NOTICES.md`.
+**Allow-list decision (2026-11-20, project owner):** **MPL-2.0** is approved for the host-only model export tooling (`tools/export/rfdetr`: `certifi`, `tqdm`), which is never part of the image. Also: the permissive licences **PSF-2.0** (typing_extensions), **0BSD** and **Zlib** (bundled in numpy), which reach the image only as transitive dependencies of the allow-listed `onnx` and `jsonschema`, are approved. The exact packages and versions are in `THIRD_PARTY_NOTICES.md`.
 
 Adding anything not on this list, especially GPL/AGPL/SSPL/BUSL/"non-commercial", requires asking the project owner first. LGPL libraries must stay dynamically linked and unmodified (or modifications published).
 
@@ -89,5 +89,5 @@ Status for `v0.1.0` (checked 2026-11-20). Items marked **OWNER** need the projec
 - [x] README states: the source is Apache-2.0; images and binaries include NVIDIA components under NVIDIA terms; model weights are licensed separately; H.264/H.265 patent note (§4).
 - [x] Decision on publishing images recorded: **no images are published** for `v0.1.0`; users build locally (§4 default policy). Changing this needs a recorded owner decision.
 - [ ] **OWNER — project name.** Checked 2026-11-20: PyPI `perceptra` is taken by an unrelated computer-vision MLOps SDK ("Perceptra Hub"), and a company "Perceptra.ai" lists computer-vision products; our package name `perceptra-tools` is free on PyPI. No trademark search was done (USPTO/EUIPO). Decide whether to keep the name or rename before a public release (`CLAUDE.md` lists every place the name appears).
-- [ ] **OWNER — `<PROJECT_OWNER>`** is still a placeholder in `NOTICE` and the copyright line of every source file (97 files); replace it before the release.
-- [ ] **OWNER — export tooling licences.** `tools/export/rfdetr` installs, in its own host virtualenv (never in the image), packages under licences that are permissive but not all on the §6 list: MPL-2.0 (`certifi`, `tqdm`, file-level copyleft, used unmodified), plus Apache-2.0/BSD/MIT. Confirm this is acceptable.
+- [x] Copyright owner set: **Abhinand A S** (2026-11-20) in `NOTICE`, every copyright line (97 files), `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`.
+- [x] Export tooling licences approved by the project owner (2026-11-20): `tools/export/rfdetr` installs, in its own host virtualenv (never in the image), Apache-2.0/BSD/MIT packages plus **MPL-2.0** (`certifi`, `tqdm`; file-level copyleft, used unmodified). MPL-2.0 is allowed for this host-only tooling (§6).

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 #
 # Two-stage Perceptra image on public NVIDIA DeepStream.
 #   build:   compiles the `perceptra` binary against the deepstream-app/apps-common sources and

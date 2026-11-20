@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """perceptra-run end to end (dry run): precedence, licence gate, error reporting, ONNX check."""
 
 from __future__ import annotations

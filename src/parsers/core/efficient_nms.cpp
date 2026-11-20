@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) 2026 <PROJECT_OWNER>
+ * Copyright (c) 2026 Abhinand A S
  */
 
 // efficient_nms.cpp - outputs of the TensorRT EfficientNMS plugin: num_dets [1], boxes [M, 4]

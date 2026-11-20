@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """Third-party report: what the built Perceptra image actually contains, with licences.
 
     python3 tools/ci/third_party_report.py --image perceptra:local            # print Markdown

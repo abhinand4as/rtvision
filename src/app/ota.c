@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Modifications Copyright (c) 2026 <PROJECT_OWNER>
+ * Modifications Copyright (c) 2026 Abhinand A S
  * Changes: derived from the OTA model-update code of RT-CV src/metropolis_perception_app.c
  * (ota_handler_thread, apply_ota, infer_model_updated_cb); the override file is a small INI read
  * with GKeyFile instead of a full deepstream-app config; poll() with a timeout so the thread

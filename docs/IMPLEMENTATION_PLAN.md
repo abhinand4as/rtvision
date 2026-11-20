@@ -166,7 +166,7 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 - `docs/MODELS.md` (bring your own model, written from the RF-DETR onboarding) and `docs/TROUBLESHOOTING.md` (exit codes, startup, streams, events, shutdown; every metric/config name checked against the code).
 - `examples/consumer/print_events.py` and `occupancy.py` (stdin JSON Lines, standard library only); `occupancy.py` verified on live Kafka output of `rfdetr-s-people` (smoothed counts, 0 after the stream ended). Unit tests in `tests/python/test_examples.py`.
 - `tools/ci/third_party_report.py`: report from the built image; `--check` passes.
-- **PENDING-OWNER** before tagging: project name (PyPI `perceptra` is taken by an unrelated CV SDK), `<PROJECT_OWNER>` placeholder, export-tooling licences (MPL-2.0 `certifi`/`tqdm`, host only). See `docs/LICENSING.md` §8.
+- **PENDING-OWNER** before tagging: the project name (PyPI `perceptra` is taken by an unrelated CV SDK). Owner name and export-tooling licences were settled on 2026-11-20 (`docs/LICENSING.md` §8).
 
 ---
 

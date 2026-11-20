@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) 2026 <PROJECT_OWNER>
+ * Copyright (c) 2026 Abhinand A S
  */
 
 // yolo_e2e.cpp - NMS-free end-to-end YOLO head: one tensor [K, 6] = x1, y1, x2, y2, score,

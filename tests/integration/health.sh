@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 # Wait for /startup (first start builds the TensorRT engine: up to STARTUP_TIMEOUT_S), then check
 # /live and /ready (ready needs the Kafka connection, so it gets a short grace period).
 set -euo pipefail

@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Modifications Copyright (c) 2026 <PROJECT_OWNER>
+ * Modifications Copyright (c) 2026 Abhinand A S
  * Changes: derived from perf_cb() in RT-CV src/metropolis_perception_app.c; console table
  * replaced by one key=value log line per active source plus a summary; the last report is kept
  * (with copied sensor ids) for the Prometheus FPS gauges and the active-stream count.

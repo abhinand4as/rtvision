@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 # POST /api/v1/stream/remove and wait for perceptra_streams_active == 0 (within 10 s).
 set -euo pipefail
 # shellcheck source=tests/integration/common.sh

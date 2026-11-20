@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """JSON Schema validation helpers for ``perceptra.yaml`` and ``model.yaml``.
 
 * YAML is loaded with ``yaml.safe_load``.

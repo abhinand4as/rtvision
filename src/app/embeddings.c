@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Modifications Copyright (c) 2026 <PROJECT_OWNER>
+ * Modifications Copyright (c) 2026 Abhinand A S
  * Changes: derived from the tracker-ReID embedding cache of RT-CV
  * src/metropolis_perception_app.c (push/pop/retrieve_embedding_queue, reid_store_age); the
  * per-stream queue of per-frame lists is reimplemented as a per-stream hash map

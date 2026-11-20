@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 #
 # Container entrypoint.
 #   (no args) or flags  -> exec perceptra-run [flags]   (validate, generate configs, run)

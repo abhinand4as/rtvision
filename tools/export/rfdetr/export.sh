@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 #
 # Export RF-DETR to ONNX on the host (no GPU needed). Creates a separate virtualenv with pinned,
 # permissively licensed tooling (rfdetr Apache-2.0, PyTorch BSD-3-Clause, CPU build), downloads

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """Schemas: examples validate, errors carry field paths, env overrides, event schema."""
 
 from __future__ import annotations

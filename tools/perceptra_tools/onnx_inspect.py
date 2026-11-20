@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """Inspect ONNX input/output names and shapes and check them against an output family.
 
 No inference is run and external weight data is not loaded. Usage::

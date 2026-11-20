@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """onnx_inspect: tiny synthetic graphs built with onnx.helper (no downloaded models)."""
 
 from __future__ import annotations

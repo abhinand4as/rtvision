@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """Minimal RTSP server for integration tests (GStreamer RTSP server via PyGObject).
 
 Serves an H.264 MP4 (default: the DeepStream sample inside the container) at

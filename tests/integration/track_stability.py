@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """Summarise tracker stability from Perceptra events (JSON Lines on stdin or a file).
 
 Per stream (sensor.id), events are taken in frame order. Reported:

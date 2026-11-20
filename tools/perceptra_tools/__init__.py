@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 <PROJECT_OWNER>
+# Copyright (c) 2026 Abhinand A S
 """Perceptra tooling: config validation, DeepStream config generation, entrypoint.
 
 Placeholder: implemented in milestone M3.
