@@ -4,7 +4,7 @@
  */
 
 // test_adapter.cpp - DeepStream adapter smoke tests (needs DeepStream/TensorRT headers only,
-// no GPU). parser.ini is written to a temp file and PERCEPTRA_PARSER_CONFIG is set before the
+// no GPU). parser.ini is written to a temp file and RTVISION_PARSER_CONFIG is set before the
 // first parse call, because the adapter reads it once per process.
 #include <cstdio>
 #include <cstdlib>
@@ -17,14 +17,14 @@
 
 #include "test_harness.hpp"
 
-extern "C" bool NvDsInferParsePerceptra_YoloE2E(std::vector<NvDsInferLayerInfo> const &,
-                                                NvDsInferNetworkInfo const &,
-                                                NvDsInferParseDetectionParams const &,
-                                                std::vector<NvDsInferParseObjectInfo> &);
-extern "C" bool NvDsInferParsePerceptra_Detr(std::vector<NvDsInferLayerInfo> const &,
-                                             NvDsInferNetworkInfo const &,
-                                             NvDsInferParseDetectionParams const &,
-                                             std::vector<NvDsInferParseObjectInfo> &);
+extern "C" bool NvDsInferParseRTVision_YoloE2E(std::vector<NvDsInferLayerInfo> const &,
+                                               NvDsInferNetworkInfo const &,
+                                               NvDsInferParseDetectionParams const &,
+                                               std::vector<NvDsInferParseObjectInfo> &);
+extern "C" bool NvDsInferParseRTVision_Detr(std::vector<NvDsInferLayerInfo> const &,
+                                            NvDsInferNetworkInfo const &,
+                                            NvDsInferParseDetectionParams const &,
+                                            std::vector<NvDsInferParseObjectInfo> &);
 
 static NvDsInferLayerInfo layer(const char *name, NvDsInferDataType type, void *buf,
                                 std::vector<unsigned> dims) {
@@ -61,7 +61,7 @@ TEST(adapter_yolo_e2e_by_name) {
     std::vector<NvDsInferLayerInfo> layers = {layer("decoy", FLOAT, decoy, {1, 6}),
                                               layer("output0", FLOAT, rows, {2, 6})};
     std::vector<NvDsInferParseObjectInfo> objs;
-    CHECK(NvDsInferParsePerceptra_YoloE2E(layers, kNet, det_params(3, 0.5f), objs));
+    CHECK(NvDsInferParseRTVision_YoloE2E(layers, kNet, det_params(3, 0.5f), objs));
     CHECK_EQ(objs.size(), 1u);
     if (objs.size() == 1) {
         CHECK_EQ(objs[0].classId, 2u);
@@ -78,7 +78,7 @@ TEST(adapter_threshold_from_nvinfer) {
     float rows[6] = {10, 20, 110, 220, 0.6f, 2};
     std::vector<NvDsInferLayerInfo> layers = {layer("output0", FLOAT, rows, {1, 6})};
     std::vector<NvDsInferParseObjectInfo> objs;
-    CHECK(NvDsInferParsePerceptra_YoloE2E(layers, kNet, det_params(3, 0.7f), objs));
+    CHECK(NvDsInferParseRTVision_YoloE2E(layers, kNet, det_params(3, 0.7f), objs));
     CHECK_EQ(objs.size(), 0u);
 }
 
@@ -86,7 +86,7 @@ TEST(adapter_shape_error_returns_false) {
     float bad[5] = {0, 0, 0, 0, 0};
     std::vector<NvDsInferLayerInfo> layers = {layer("output0", FLOAT, bad, {1, 5})};
     std::vector<NvDsInferParseObjectInfo> objs;
-    CHECK(!NvDsInferParsePerceptra_YoloE2E(layers, kNet, det_params(3, 0.5f), objs));
+    CHECK(!NvDsInferParseRTVision_YoloE2E(layers, kNet, det_params(3, 0.5f), objs));
     CHECK_EQ(objs.size(), 0u);
 }
 
@@ -95,7 +95,7 @@ TEST(adapter_family_mismatch_returns_false) {
     std::vector<NvDsInferLayerInfo> layers = {layer("boxes", FLOAT, boxes, {1, 4}),
                                               layer("logits", FLOAT, logits, {1, 3})};
     std::vector<NvDsInferParseObjectInfo> objs;
-    CHECK(!NvDsInferParsePerceptra_Detr(layers, kNet, det_params(3, 0.5f), objs));
+    CHECK(!NvDsInferParseRTVision_Detr(layers, kNet, det_params(3, 0.5f), objs));
 }
 
 TEST(adapter_int32_class_tensor) {
@@ -103,12 +103,12 @@ TEST(adapter_int32_class_tensor) {
     int32_t rows[6] = {10, 20, 110, 220, 1, 2}; // score 1 (int) passes
     std::vector<NvDsInferLayerInfo> layers = {layer("output0", INT32, rows, {1, 6})};
     std::vector<NvDsInferParseObjectInfo> objs;
-    CHECK(NvDsInferParsePerceptra_YoloE2E(layers, kNet, det_params(3, 0.5f), objs));
+    CHECK(NvDsInferParseRTVision_YoloE2E(layers, kNet, det_params(3, 0.5f), objs));
     CHECK_EQ(objs.size(), 1u);
 }
 
 int main(int argc, char **argv) {
-    char path[] = "/tmp/perceptra_parser_test_XXXXXX";
+    char path[] = "/tmp/rtvision_parser_test_XXXXXX";
     const int fd = mkstemp(path);
     if (fd < 0)
         return 2;
@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
     if (write(fd, ini, std::strlen(ini)) < 0)
         return 2;
     close(fd);
-    setenv("PERCEPTRA_PARSER_CONFIG", path, 1);
+    setenv("RTVISION_PARSER_CONFIG", path, 1);
     const int rc = th::run_all(argc, argv);
     unlink(path);
     return rc;

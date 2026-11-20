@@ -12,18 +12,18 @@
 
 namespace tu {
 
-inline perceptra::TensorView view(const std::vector<float> &data, std::vector<int> dims,
-                                  const char *name = "t") {
-    perceptra::TensorView t;
+inline rtvision::TensorView view(const std::vector<float> &data, std::vector<int> dims,
+                                 const char *name = "t") {
+    rtvision::TensorView t;
     t.data = data.empty() ? nullptr : data.data();
     t.dims = std::move(dims);
     t.name = name;
     return t;
 }
 
-inline perceptra::ParseParams params(int num_classes, float thr = 0.5f, int net_w = 640,
-                                     int net_h = 640) {
-    perceptra::ParseParams p;
+inline rtvision::ParseParams params(int num_classes, float thr = 0.5f, int net_w = 640,
+                                    int net_h = 640) {
+    rtvision::ParseParams p;
     p.net_w = net_w;
     p.net_h = net_h;
     p.num_classes = num_classes;

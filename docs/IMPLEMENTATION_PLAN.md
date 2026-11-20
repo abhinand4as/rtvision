@@ -4,7 +4,7 @@
 ## Target repository layout
 
 ```text
-perceptra/
+rtvision/
 ├── README.md                     quick start, features, licence summary
 ├── ARCHITECTURE.md  CLAUDE.md  CHANGELOG.md
 ├── LICENSE                       Apache-2.0 (full text)
@@ -18,13 +18,13 @@ perceptra/
 │   ├── service_config.schema.json
 │   └── model.schema.json
 ├── src/
-│   ├── app/                      C (gnu11) — the `perceptra` binary
+│   ├── app/                      C (gnu11) — the `rtvision` binary
 │   │   ├── main.c                CLI, lifecycle, signals            (derived: RT-CV main())
 │   │   ├── app_config.c/.h       reads app.ini (GKeyFile)
-│   │   ├── probe.c/.h            perceptra_probe + task dispatch     (derived: RT-CV probe)
+│   │   ├── probe.c/.h            rtvision_probe + task dispatch     (derived: RT-CV probe)
 │   │   ├── task_detect.c         detect handler
 │   │   ├── task_registry.c/.h    task → handler table (segment/pose = stubs returning "unsupported")
-│   │   ├── event_model.h         PerceptraFrameEvent / PerceptraObject structs
+│   │   ├── event_model.h         RTVisionFrameEvent / RTVisionObject structs
 │   │   ├── event_serialize.c/.h  JSON via json-glib (schema v1)
 │   │   ├── publisher.c/.h        bounded queue + worker thread + backend vtable
 │   │   ├── publisher_kafka.c     librdkafka backend
@@ -42,18 +42,18 @@ perceptra/
 │       │   ├── detection.hpp     Detection, ParseParams, BoxFormat, Activation
 │       │   ├── yolo_e2e.cpp  yolo_raw.cpp  detr.cpp  efficient_nms.cpp
 │       │   └── params_ini.cpp    parser.ini reader
-│       ├── ds_adapter.cpp        NvDsInferParsePerceptra_* exports
+│       ├── ds_adapter.cpp        NvDsInferParseRTVision_* exports
 │       ├── tests/                test_*.cpp + tiny header-only test harness (own code)
 │       └── Makefile              targets: all, test, test-core (core needs no DeepStream)
-├── tools/perceptra_tools/        Python ≥3.10 package
-│   ├── run.py                    `perceptra-run` entrypoint
+├── tools/rtvision_tools/        Python ≥3.10 package
+│   ├── run.py                    `rtvision-run` entrypoint
 │   ├── gen_configs.py            yaml → DeepStream INI + app.ini + parser.ini
 │   ├── onnx_inspect.py           output shapes / names → family check
 │   ├── schemas.py                JSON Schema validation helpers
 │   └── templates/                ds_main.ini.j2  pgie.ini.j2  app.ini.j2  parser.ini.j2
 ├── tools/export/                 OPTIONAL, separately installed exporters (see LICENSING)
 │   └── rfdetr/README.md + export.sh + export_rfdetr.py   (own venv, never a dependency of the service)
-├── config/perceptra.example.yaml
+├── config/rtvision.example.yaml
 ├── models/examples/              model.yaml + labels only (no weights)
 │   ├── rfdetr-s-coco/            RF-DETR Small (Apache-2.0): compose + integration-test default
 │   ├── rfdetr-s-people/          same network, `person` only
@@ -97,23 +97,23 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 ### M2 — Parser library
 - [x] `core/`: implement `yolo_e2e`, `yolo_raw` (both layouts, auto-detect by shape), `detr` (box formats `cxcywh_norm`, `xyxy_norm`, `xyxy_px`; activations `sigmoid`, `softmax`, `none`; optional background class), `efficient_nms`.
 - [x] Common post-steps: score threshold per class, class allow-list, clamp to network size, drop boxes < 1 px, top-k.
-- [x] `ds_adapter.cpp`: exports `NvDsInferParsePerceptra_YoloE2E`, `_YoloRaw`, `_Detr`, `_EfficientNms`; reads `parser.ini` once (thread-safe `std::call_once`) from `PERCEPTRA_PARSER_CONFIG`.
+- [x] `ds_adapter.cpp`: exports `NvDsInferParseRTVision_YoloE2E`, `_YoloRaw`, `_Detr`, `_EfficientNms`; reads `parser.ini` once (thread-safe `std::call_once`) from `RTVISION_PARSER_CONFIG`.
 - [x] Unit tests with synthetic tensors per family (including edge cases: empty output, all below threshold, out-of-range class, NaN scores, transposed layout).
 
-**Acceptance:** `make -C src/parsers test-core` passes without DeepStream; `make -C src/parsers` builds `libperceptra_parsers.so` in the container.
+**Acceptance:** `make -C src/parsers test-core` passes without DeepStream; `make -C src/parsers` builds `librtvision_parsers.so` in the container.
 
-**Status:** done (2026-11-20). `make -C src/parsers test-core`: 15/15 pass on the host (GCC 11, no DeepStream) and in the image (GCC 13), under ASan + UBSan. In the Docker build stage `make -C src/parsers test` also runs 5 adapter tests (by-name layer lookup, nvinfer thresholds, shape error → `false`, family mismatch, INT32 conversion) and builds `libperceptra_parsers.so`, which exports exactly the 4 `NvDsInferParsePerceptra_*` symbols and is installed at `/opt/perceptra/lib/`. Accuracy against real models is verified with user-supplied ONNX files in M7.
+**Status:** done (2026-11-20). `make -C src/parsers test-core`: 15/15 pass on the host (GCC 11, no DeepStream) and in the image (GCC 13), under ASan + UBSan. In the Docker build stage `make -C src/parsers test` also runs 5 adapter tests (by-name layer lookup, nvinfer thresholds, shape error → `false`, family mismatch, INT32 conversion) and builds `librtvision_parsers.so`, which exports exactly the 4 `NvDsInferParseRTVision_*` symbols and is installed at `/opt/rtvision/lib/`. Accuracy against real models is verified with user-supplied ONNX files in M7.
 
-### M3 — Configuration system (`perceptra-run`)
+### M3 — Configuration system (`rtvision-run`)
 - [x] `schemas/service_config.schema.json`, `schemas/model.schema.json` (per `docs/CONFIGURATION.md`).
 - [x] `gen_configs.py`: render the templates; derive every batch-size touch point from `service.max_streams`; derive `filter-out-class-ids` from `classes.keep`; engine file name `<model>_b<batch>_<precision>_gpu<id>_trt<ver>.engine`.
 - [x] `onnx_inspect.py`: load ONNX (no inference), check output names/ranks against the family, and warn if a fixed batch dimension < `max_streams`.
-- [x] `run.py`: validate → generate into `/tmp/perceptra/generated` → export `PERCEPTRA_PARSER_CONFIG` → `os.execv` the binary.
-- [x] Licence gate: if `model.license.spdx` is not in the permissive allow-list, print a prominent warning, and refuse to start unless `PERCEPTRA_ACCEPT_MODEL_LICENSE=<spdx>` is set.
+- [x] `run.py`: validate → generate into `/tmp/rtvision/generated` → export `RTVISION_PARSER_CONFIG` → `os.execv` the binary.
+- [x] Licence gate: if `model.license.spdx` is not in the permissive allow-list, print a prominent warning, and refuse to start unless `RTVISION_ACCEPT_MODEL_LICENSE=<spdx>` is set.
 
 **Acceptance:** `pytest -q tests/python` passes (golden generated configs for the 3 example models); invalid YAML produces a clear error with the field path.
 
-**Status:** done (2026-11-20). `pytest -q`: 83 passed (schemas, env overrides, event schema, golden configs for the 3 example models, mapping rules, licence gate exit 3, ONNX checks on synthetic graphs, `perceptra-run` dry runs). Errors name the file and field path, e.g. `service.max_streams: -1 is less than the minimum of 1`. GPU check: the image's entry point is now `perceptra-run`; TrafficCamNet (builtin) and a synthetic `yolo_e2e` ONNX (`tests/integration/make_synthetic_onnx.py`, read-only models mount) run from generated configs, the synthetic model yields exactly the 2 expected detections per frame through `libperceptra_parsers.so`, and its engine is cached and reused on restart (deviation #13).
+**Status:** done (2026-11-20). `pytest -q`: 83 passed (schemas, env overrides, event schema, golden configs for the 3 example models, mapping rules, licence gate exit 3, ONNX checks on synthetic graphs, `rtvision-run` dry runs). Errors name the file and field path, e.g. `service.max_streams: -1 is less than the minimum of 1`. GPU check: the image's entry point is now `rtvision-run`; TrafficCamNet (builtin) and a synthetic `yolo_e2e` ONNX (`tests/integration/make_synthetic_onnx.py`, read-only models mount) run from generated configs, the synthetic model yields exactly the 2 expected detections per frame through `librtvision_parsers.so`, and its engine is cached and reused on restart (deviation #13).
 
 ### M4 — Events and publisher
 - [x] `event_model.h`, `task_detect.c` (bbox rescale to source resolution, track id `null` when untracked, label from `obj_label`), `event_serialize.c` per `docs/EVENT_SCHEMA.md`.
@@ -134,26 +134,26 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 **Status:** done (2026-11-20), one item PENDING-REID-MODEL.
 - Track stability (`nvdcf_perf`, 44 events of the sample video, `tests/integration/track_stability.py`): every object tracked, persistence 0.65 between consecutive events (1 s apart), longest track 25 events; manual check: the longest track (a standing person) keeps its id across 12+ events and through a missed detection. `nvsort` and `iou` profiles run (all objects tracked); `none` → `track_id: null`.
 - Timestamps monotonic per stream (`consume_validate.py --check-monotonic`): file source (`system`), RTSP with RTCP via `tests/integration/rtsp_test_server.py` (`ntp`, 28/29 events), `uri_utc` (formatted file name).
-- **PENDING-REID-MODEL:** embeddings in events are implemented (`embeddings.c`, generated `tracker.yml` with `outputReidTensor: 1`) but not verified on the GPU, because NVIDIA's ReID network is not in the image and must be downloaded from NGC under NVIDIA's model licence (decision for the project owner). Verify with: mount the model at `/opt/nvidia/deepstream/deepstream/samples/models/Tracker/`, run with `PERCEPTRA__TRACKER__PROFILE=nvdcf_accuracy PERCEPTRA__TRACKER__REID=true PERCEPTRA__TRACKER__REID_STORE_AGE=30 PERCEPTRA__PUBLISH__INCLUDE_EMBEDDINGS=true`, and check `objects[].embedding.dim == 256`.
+- **PENDING-REID-MODEL:** embeddings in events are implemented (`embeddings.c`, generated `tracker.yml` with `outputReidTensor: 1`) but not verified on the GPU, because NVIDIA's ReID network is not in the image and must be downloaded from NGC under NVIDIA's model licence (decision for the project owner). Verify with: mount the model at `/opt/nvidia/deepstream/deepstream/samples/models/Tracker/`, run with `RTVISION__TRACKER__PROFILE=nvdcf_accuracy RTVISION__TRACKER__REID=true RTVISION__TRACKER__REID_STORE_AGE=30 RTVISION__PUBLISH__INCLUDE_EMBEDDINGS=true`, and check `objects[].embedding.dim == 256`.
 
 ### M6 — Ops server, metrics, hot swap
 - [x] `ops_server.c` (libsoup-3.0, own GMainContext thread), `/live` `/ready` `/startup` `/metrics`.
 - [x] Metrics listed in ARCHITECTURE §8; `perf.c` feeds the FPS gauges.
 - [x] `ota.c` hot swap (override file → set the nvinfer property → metric + log).
 
-**Acceptance (GPU):** `curl :9464/metrics` shows non-zero `perceptra_frames_processed_total`; a hot swap to a second engine works without dropping the stream.
+**Acceptance (GPU):** `curl :9464/metrics` shows non-zero `rtvision_frames_processed_total`; a hot swap to a second engine works without dropping the stream.
 
-**Status:** done (2026-11-20). `/metrics` during a stream: `perceptra_frames_processed_total{sensor_id="m1-cam-0"} 347`, FPS 30.2, objects per label, event counters, `perceptra_model_info`; `/startup` 503→200, `/ready` `{"status":"ready","streams":1}`, `/info` as in docs/API.md; `perceptra_streams_active` 0 three seconds after `stream/remove`. Hot swap: synthetic model A (2 persons) → engine of model B (3 persons) via `inference.hot_swap_file` while streaming: objects per event 2→3 at frame 210 with no frame gap, swap 14 ms, `perceptra_model_swaps_total{result="ok"} 1`; an invalid engine path is rejected (`{result="failed"} 1`). No GPU: `make -C src/app test` adds `test-metrics` (Prometheus format).
+**Status:** done (2026-11-20). `/metrics` during a stream: `rtvision_frames_processed_total{sensor_id="m1-cam-0"} 347`, FPS 30.2, objects per label, event counters, `rtvision_model_info`; `/startup` 503→200, `/ready` `{"status":"ready","streams":1}`, `/info` as in docs/API.md; `rtvision_streams_active` 0 three seconds after `stream/remove`. Hot swap: synthetic model A (2 persons) → engine of model B (3 persons) via `inference.hot_swap_file` while streaming: objects per event 2→3 at frame 210 with no frame gap, swap 14 ms, `rtvision_model_swaps_total{result="ok"} 1`; an invalid engine path is rejected (`{result="failed"} 1`). No GPU: `make -C src/app test` adds `test-metrics` (Prometheus format).
 
 ### M7 — Container, compose, integration tests
-- [x] Final Dockerfile (non-root uid 1000, `HEALTHCHECK` on `/live`), `entrypoint.sh` → `perceptra-run`.
-- [x] `deploy/compose/compose.yaml`: `apache/kafka` (KRaft, single node) + `perceptra` (GPU reservation, ports 9000/9464, volumes).
+- [x] Final Dockerfile (non-root uid 1000, `HEALTHCHECK` on `/live`), `entrypoint.sh` → `rtvision-run`.
+- [x] `deploy/compose/compose.yaml`: `apache/kafka` (KRaft, single node) + `rtvision` (GPU reservation, ports 9000/9464, volumes).
 - [x] `tests/integration/run_all.sh`: deploy → health → add stream → consume ≥ `MIN_EVENTS` and validate each against the schema → remove stream → `docker compose stop` exits cleanly.
 - [x] ~~YOLO26 people profile~~ → RF-DETR Small people profile (`models/examples/rfdetr-s-people`, Apache-2.0) verified end to end; RF-DETR also replaces TrafficCamNet as the integration-test model (deviation #31).
 
 **Acceptance (GPU):** `tests/integration/run_all.sh` passes on a clean machine.
 
-**Status:** done (2026-11-20). Default model RF-DETR Small (Apache-2.0, deviation #31): `tools/export/rfdetr/export.sh` then `tests/integration/run_all.sh` → `PASS: integration test` with no licence acceptance: dry-run preflight, `/startup` 200 (37 s with the engine build, ~3 s from the engine cache), `/live`, `/ready`, stream add, Kafka events valid against the schema (sensor `it-cam-0`, monotonic; cars, persons, backpack, bus, truck at 0.55–0.96, all tracked), Kafka key `it-cam-0` with `schema`/`content-type` headers, `perceptra_events_published_total` > 0, stream remove → `perceptra_streams_active` 0, `docker compose stop` → exit 0 in 9 s. `PERCEPTRA_MODEL=rfdetr-s-people` passes the same test on topic `people-raw` with only `person` objects. First runs of the Kafka backend against a broker (apache/kafka 4.3.2, KRaft). The image runs as uid 1000 (`perceptra`) with a `/live` `HEALTHCHECK`. The previous default `trafficcamnet-sample` also passes (with `PERCEPTRA_ACCEPT_MODEL_LICENSE=LicenseRef-NVIDIA-AI-Product-License`, 12 s → 3 s startup with its engine now cached). Deviations #28–#31. CI lint adds shellcheck and `docker compose config`.
+**Status:** done (2026-11-20). Default model RF-DETR Small (Apache-2.0, deviation #31): `tools/export/rfdetr/export.sh` then `tests/integration/run_all.sh` → `PASS: integration test` with no licence acceptance: dry-run preflight, `/startup` 200 (37 s with the engine build, ~3 s from the engine cache), `/live`, `/ready`, stream add, Kafka events valid against the schema (sensor `it-cam-0`, monotonic; cars, persons, backpack, bus, truck at 0.55–0.96, all tracked), Kafka key `it-cam-0` with `schema`/`content-type` headers, `rtvision_events_published_total` > 0, stream remove → `rtvision_streams_active` 0, `docker compose stop` → exit 0 in 9 s. `RTVISION_MODEL=rfdetr-s-people` passes the same test on topic `people-raw` with only `person` objects. First runs of the Kafka backend against a broker (apache/kafka 4.3.2, KRaft). The image runs as uid 1000 (`rtvision`) with a `/live` `HEALTHCHECK`. The previous default `trafficcamnet-sample` also passes (with `RTVISION_ACCEPT_MODEL_LICENSE=LicenseRef-NVIDIA-AI-Product-License`, 12 s → 3 s startup with its engine now cached). Deviations #28–#31. CI lint adds shellcheck and `docker compose config`.
 
 ### M8 — Documentation and release hygiene
 - [x] README quick start (build, run, add camera, see events), model onboarding guide, troubleshooting.
@@ -166,7 +166,7 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 - `docs/MODELS.md` (bring your own model, written from the RF-DETR onboarding) and `docs/TROUBLESHOOTING.md` (exit codes, startup, streams, events, shutdown; every metric/config name checked against the code).
 - `examples/consumer/print_events.py` and `occupancy.py` (stdin JSON Lines, standard library only); `occupancy.py` verified on live Kafka output of `rfdetr-s-people` (smoothed counts, 0 after the stream ended). Unit tests in `tests/python/test_examples.py`.
 - `tools/ci/third_party_report.py`: report from the built image; `--check` passes.
-- **PENDING-OWNER** before tagging: the project name (PyPI `perceptra` is taken by an unrelated CV SDK). Owner name and export-tooling licences were settled on 2026-11-20 (`docs/LICENSING.md` §8).
+- Owner decisions settled on 2026-11-20 (`docs/LICENSING.md` §8): owner Abhinand A S, MPL-2.0 for the host-only export tooling, project renamed from the working name `perceptra` to **RTVision** (deviation #32).
 
 ---
 

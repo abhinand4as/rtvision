@@ -11,44 +11,44 @@
  * Lines are written to stderr with a single write, so lines from different threads do not
  * interleave. Formatting happens on a fixed stack buffer (no heap allocation per line).
  */
-#ifndef PERCEPTRA_LOG_H
-#define PERCEPTRA_LOG_H
+#ifndef RTVISION_LOG_H
+#define RTVISION_LOG_H
 
 #include <glib.h>
 
 G_BEGIN_DECLS
 
 typedef enum {
-    PERCEPTRA_LOG_ERROR = 0,
-    PERCEPTRA_LOG_WARN = 1,
-    PERCEPTRA_LOG_INFO = 2,
-    PERCEPTRA_LOG_DEBUG = 3,
-} PerceptraLogLevel;
+    RTVISION_LOG_ERROR = 0,
+    RTVISION_LOG_WARN = 1,
+    RTVISION_LOG_INFO = 2,
+    RTVISION_LOG_DEBUG = 3,
+} RTVisionLogLevel;
 
-void perceptra_log_set_level(PerceptraLogLevel level);
-PerceptraLogLevel perceptra_log_get_level(void);
+void rtvision_log_set_level(RTVisionLogLevel level);
+RTVisionLogLevel rtvision_log_get_level(void);
 
 /* Parses "error" | "warn" | "info" | "debug" (case-insensitive). Returns FALSE if unknown. */
-gboolean perceptra_log_parse_level(const char *text, PerceptraLogLevel *out);
+gboolean rtvision_log_parse_level(const char *text, RTVisionLogLevel *out);
 
-static inline gboolean perceptra_log_enabled(PerceptraLogLevel level) {
-    return level <= perceptra_log_get_level();
+static inline gboolean rtvision_log_enabled(RTVisionLogLevel level) {
+    return level <= rtvision_log_get_level();
 }
 
-void perceptra_log(PerceptraLogLevel level, const char *component, const char *fmt, ...)
+void rtvision_log(RTVisionLogLevel level, const char *component, const char *fmt, ...)
     G_GNUC_PRINTF(3, 4);
 
 #define PLOG(level, comp, ...)                                                                     \
     do {                                                                                           \
-        if (perceptra_log_enabled(level))                                                          \
-            perceptra_log((level), (comp), __VA_ARGS__);                                           \
+        if (rtvision_log_enabled(level))                                                           \
+            rtvision_log((level), (comp), __VA_ARGS__);                                            \
     } while (0)
 
-#define PLOG_ERROR(comp, ...) PLOG(PERCEPTRA_LOG_ERROR, comp, __VA_ARGS__)
-#define PLOG_WARN(comp, ...) PLOG(PERCEPTRA_LOG_WARN, comp, __VA_ARGS__)
-#define PLOG_INFO(comp, ...) PLOG(PERCEPTRA_LOG_INFO, comp, __VA_ARGS__)
-#define PLOG_DEBUG(comp, ...) PLOG(PERCEPTRA_LOG_DEBUG, comp, __VA_ARGS__)
+#define PLOG_ERROR(comp, ...) PLOG(RTVISION_LOG_ERROR, comp, __VA_ARGS__)
+#define PLOG_WARN(comp, ...) PLOG(RTVISION_LOG_WARN, comp, __VA_ARGS__)
+#define PLOG_INFO(comp, ...) PLOG(RTVISION_LOG_INFO, comp, __VA_ARGS__)
+#define PLOG_DEBUG(comp, ...) PLOG(RTVISION_LOG_DEBUG, comp, __VA_ARGS__)
 
 G_END_DECLS
 
-#endif /* PERCEPTRA_LOG_H */
+#endif /* RTVISION_LOG_H */

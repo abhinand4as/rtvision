@@ -9,7 +9,7 @@ from pathlib import Path
 import onnx
 import pytest
 from onnx import TensorProto, helper
-from perceptra_tools import onnx_inspect
+from rtvision_tools import onnx_inspect
 
 Shape = list[int | str]
 

@@ -10,13 +10,13 @@ source "$(dirname "$0")/common.sh"
 # Fail fast if the service container dies or restarts while we wait (when run under compose).
 check_container() {
     local cid state
-    cid="$(compose ps -a -q perceptra 2>/dev/null || true)"
+    cid="$(compose ps -a -q rtvision 2>/dev/null || true)"
     [[ -n "$cid" ]] || return 0
     state="$(docker inspect -f '{{.State.Status}} {{.RestartCount}} {{.State.ExitCode}}' "$cid")"
     read -r status restarts code <<<"$state"
     if [[ "$status" != running || "$restarts" != 0 ]]; then
-        compose logs --no-color --tail 15 perceptra >&2 || true
-        fail "perceptra container $status (restarts=$restarts, last exit code $code)"
+        compose logs --no-color --tail 15 rtvision >&2 || true
+        fail "rtvision container $status (restarts=$restarts, last exit code $code)"
     fi
 }
 

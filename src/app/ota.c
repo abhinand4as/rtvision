@@ -49,7 +49,7 @@ static guint64 swaps_ok, swaps_failed;
 static gint64 request_time_us; /* atomic */
 static gchar *last_applied;    /* main thread only */
 
-void perceptra_ota_counts(guint64 *ok, guint64 *failed) {
+void rtvision_ota_counts(guint64 *ok, guint64 *failed) {
     *ok = __atomic_load_n(&swaps_ok, __ATOMIC_RELAXED);
     *failed = __atomic_load_n(&swaps_failed, __ATOMIC_RELAXED);
 }
@@ -167,7 +167,7 @@ static gpointer watcher_main(gpointer data) {
     return NULL;
 }
 
-gboolean perceptra_ota_start(AppCtx *app_ctx, const char *watch_file, GError **error) {
+gboolean rtvision_ota_start(AppCtx *app_ctx, const char *watch_file, GError **error) {
     pgie = app_ctx->pipeline.common_elements.primary_gie_bin.primary_gie;
     if (pgie == NULL) {
         g_set_error(error, G_IO_ERROR, G_IO_ERROR_NOT_INITIALIZED, "no primary nvinfer");
@@ -195,13 +195,13 @@ gboolean perceptra_ota_start(AppCtx *app_ctx, const char *watch_file, GError **e
     signal_id =
         g_signal_connect(G_OBJECT(pgie), "model-updated", G_CALLBACK(on_model_updated), NULL);
     g_atomic_int_set(&stop_requested, 0);
-    thread = g_thread_new("perceptra-ota", watcher_main, NULL);
+    thread = g_thread_new("rtvision-ota", watcher_main, NULL);
     PLOG_INFO("ota", "event=watching file=%s dir=%s", watch_file, dir);
     g_free(dir);
     return TRUE;
 }
 
-void perceptra_ota_stop(void) {
+void rtvision_ota_stop(void) {
     if (thread == NULL)
         return;
     g_atomic_int_set(&stop_requested, 1);

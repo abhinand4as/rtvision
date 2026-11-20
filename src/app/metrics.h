@@ -8,8 +8,8 @@
  * Rendering works on a plain snapshot struct filled by the ops server from the probe, perf,
  * publisher and hot-swap counters, so this file depends on GLib only (unit-tested in CI).
  */
-#ifndef PERCEPTRA_METRICS_H
-#define PERCEPTRA_METRICS_H
+#ifndef RTVISION_METRICS_H
+#define RTVISION_METRICS_H
 
 #include <glib.h>
 
@@ -17,26 +17,26 @@ G_BEGIN_DECLS
 
 typedef struct {
     const gchar *sensor_id;
-    guint64 frames; /* perceptra_frames_processed_total */
-} PerceptraMetricsStream;
+    guint64 frames; /* rtvision_frames_processed_total */
+} RTVisionMetricsStream;
 
 typedef struct {
     const gchar *sensor_id;
-    gdouble fps; /* perceptra_stream_fps */
-} PerceptraMetricsFps;
+    gdouble fps; /* rtvision_stream_fps */
+} RTVisionMetricsFps;
 
 typedef struct {
     const gchar *sensor_id;
     const gchar *label;
-    guint64 count; /* perceptra_objects_detected_total */
-} PerceptraMetricsObjects;
+    guint64 count; /* rtvision_objects_detected_total */
+} RTVisionMetricsObjects;
 
 typedef struct {
-    const PerceptraMetricsStream *streams;
+    const RTVisionMetricsStream *streams;
     guint n_streams;
-    const PerceptraMetricsFps *fps;
+    const RTVisionMetricsFps *fps;
     guint n_fps;
-    const PerceptraMetricsObjects *objects;
+    const RTVisionMetricsObjects *objects;
     guint n_objects;
     guint streams_active;
     gboolean has_publisher;
@@ -45,14 +45,14 @@ typedef struct {
     const gchar *model_name, *model_version, *model_task, *model_family, *model_precision,
         *model_license;
     guint64 swaps_ok, swaps_failed;
-} PerceptraMetricsSnapshot;
+} RTVisionMetricsSnapshot;
 
 /* Truncates `out` and writes the full exposition. */
-void perceptra_metrics_render(const PerceptraMetricsSnapshot *snap, GString *out);
+void rtvision_metrics_render(const RTVisionMetricsSnapshot *snap, GString *out);
 
 /* Appends a label value escaped per the exposition format (\\, \", \n). */
-void perceptra_metrics_escape_label(GString *out, const gchar *value);
+void rtvision_metrics_escape_label(GString *out, const gchar *value);
 
 G_END_DECLS
 
-#endif /* PERCEPTRA_METRICS_H */
+#endif /* RTVISION_METRICS_H */

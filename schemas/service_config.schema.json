@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/perceptra/service_config.schema.json",
+  "$id": "https://example.invalid/rtvision/service_config.schema.json",
   "$comment": "SPDX-License-Identifier: Apache-2.0",
-  "title": "Perceptra service configuration",
+  "title": "RTVision service configuration",
   "type": "object",
   "additionalProperties": false,
   "required": ["service", "publish"],
@@ -12,7 +12,7 @@
       "additionalProperties": false,
       "required": ["max_streams"],
       "properties": {
-        "name": { "type": "string", "default": "perceptra" },
+        "name": { "type": "string", "default": "rtvision" },
         "gpu_id": { "type": "integer", "minimum": 0, "default": 0 },
         "max_streams": { "type": "integer", "minimum": 1, "maximum": 256 },
         "http_ip": { "type": "string", "default": "0.0.0.0" },

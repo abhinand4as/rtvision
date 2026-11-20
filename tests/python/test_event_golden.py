@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 from conftest import GOLDEN, REPO
-from perceptra_tools.schemas import validate_event
+from rtvision_tools.schemas import validate_event
 
 GOLDEN_EVENT = GOLDEN / "event_basic.json"
 CONSUME = REPO / "tests" / "integration" / "consume_validate.py"

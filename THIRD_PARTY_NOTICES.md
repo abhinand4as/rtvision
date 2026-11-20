@@ -26,7 +26,7 @@ This file is **regenerated before each release** by `tools/ci/third_party_report
 
 Not distributed by this project: model weights, DeepStream sample models/streams, Ultralytics software.
 
-Used by the development/integration compose stack only (pulled from Docker Hub by the user, not part of the Perceptra image):
+Used by the development/integration compose stack only (pulled from Docker Hub by the user, not part of the RTVision image):
 
 | Component | Version | Licence | Source |
 |---|---|---|---|
@@ -43,11 +43,11 @@ Used on the host to export the default model (`tools/export/rfdetr`, own virtual
 | certifi, tqdm (transitive) | | MPL-2.0 (file-level copyleft; unmodified) | https://github.com/certifi/python-certifi |
 
 <!-- BEGIN GENERATED: tools/ci/third_party_report.py -->
-## Generated report: contents of `perceptra:local` (image `52665721123b`)
+## Generated report: contents of `rtvision:local` (image `0326e9b3bf05`)
 
-Base image `nvcr.io/nvidia/deepstream:9.1-samples-multiarch`. Regenerate after any change to the Dockerfile or the Python dependencies: `python3 tools/ci/third_party_report.py --image perceptra:local --write`.
+Base image `nvcr.io/nvidia/deepstream:9.1-samples-multiarch`. Regenerate after any change to the Dockerfile or the Python dependencies: `python3 tools/ci/third_party_report.py --image rtvision:local --write`.
 
-### Python packages in `/opt/perceptra/python` (14)
+### Python packages in `/opt/rtvision/python` (14)
 
 | Package | Version | Licence (package metadata) | URL |
 |---|---|---|---|
@@ -59,11 +59,11 @@ Base image `nvcr.io/nvidia/deepstream:9.1-samples-multiarch`. Regenerate after a
 | ml_dtypes | 0.7.0 | Apache-2.0 | https://github.com/jax-ml/ml_dtypes |
 | numpy | 2.5.5 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | https://numpy.org |
 | onnx | 1.23.2 | Apache-2.0 | https://onnx.ai/ |
-| perceptra-tools | 0.1.0.dev0 | Apache-2.0 |  |
 | protobuf | 7.36.2 | 3-Clause BSD License | https://developers.google.com/protocol-buffers/ |
 | PyYAML | 6.0.3 | MIT | https://pyyaml.org/ |
 | referencing | 0.37.0 | MIT | https://github.com/python-jsonschema/referencing |
 | rpds-py | 2026.9.1 | MIT | https://github.com/crate-py/rpds |
+| rtvision-tools | 0.1.0.dev0 | Apache-2.0 |  |
 | typing_extensions | 4.16.0 | PSF-2.0 | https://github.com/python/typing_extensions |
 
 ### apt packages added by `docker/Dockerfile` on top of the base image (0)
@@ -72,7 +72,7 @@ Base image `nvcr.io/nvidia/deepstream:9.1-samples-multiarch`. Regenerate after a
 |---|---|---|---|
 | (none: every runtime package already ships in the base image) | | | |
 
-### Shared libraries loaded by `perceptra` and `libperceptra_parsers.so` (69)
+### Shared libraries loaded by `rtvision` and `librtvision_parsers.so` (69)
 
 Resolved with `ldd`. GStreamer plugins (including DeepStream's) are loaded at runtime from the base image and are not listed.
 

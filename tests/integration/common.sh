@@ -17,7 +17,7 @@ if [[ -f "$ENV_FILE" ]]; then
     done < "$ENV_FILE"
 fi
 
-: "${PERCEPTRA_HOST:=127.0.0.1}"
+: "${RTVISION_HOST:=127.0.0.1}"
 : "${REST_PORT:=9000}"
 : "${OPS_PORT:=9464}"
 : "${IT_CAMERA_ID:=it-cam-0}"
@@ -26,12 +26,12 @@ fi
 : "${STARTUP_TIMEOUT_S:=600}"
 : "${CONSUME_TIMEOUT_S:=90}"
 : "${STOP_TIMEOUT_S:=15}"
-export PERCEPTRA_HOST REST_PORT OPS_PORT IT_CAMERA_ID IT_CAMERA_URL MIN_EVENTS \
+export RTVISION_HOST REST_PORT OPS_PORT IT_CAMERA_ID IT_CAMERA_URL MIN_EVENTS \
        STARTUP_TIMEOUT_S CONSUME_TIMEOUT_S STOP_TIMEOUT_S
 
 # shellcheck disable=SC2034  # used by the scripts that source this file
-REST_URL="http://$PERCEPTRA_HOST:$REST_PORT"
-OPS_URL="http://$PERCEPTRA_HOST:$OPS_PORT"
+REST_URL="http://$RTVISION_HOST:$REST_PORT"
+OPS_URL="http://$RTVISION_HOST:$OPS_PORT"
 
 pass() { echo "PASS: $*"; }
 fail() { echo "FAIL: $*" >&2; exit 1; }
@@ -56,6 +56,6 @@ stream_payload() {
 {"key":"sensor","value":{"camera_id":"$IT_CAMERA_ID","camera_name":"Integration test",
 "camera_url":"$IT_CAMERA_URL","change":"$change",
 "metadata":{"resolution":"1920x1080","codec":"h264","framerate":30}},
-"headers":{"source":"perceptra-integration","created_at":"$now"}}
+"headers":{"source":"rtvision-integration","created_at":"$now"}}
 JSON
 }

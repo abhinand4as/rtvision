@@ -7,9 +7,9 @@
  *
  * - bootstrap.servers = publish.kafka.brokers; client.id = service name; then every key=value
  *   of kafka.properties (publish.kafka.properties passthrough, e.g. SASL/TLS settings).
- * - Message key = sensor.id (or none); headers schema=perceptra.detection.v1 and
+ * - Message key = sensor.id (or none); headers schema=rtvision.detection.v1 and
  *   content-type=application/json.
- * - Delivery reports -> perceptra_publisher_report_delivery() (published / failed counters).
+ * - Delivery reports -> rtvision_publisher_report_delivery() (published / failed counters).
  * - Health: a metadata request every few seconds while idle, plus delivery results.
  * All calls happen on the publisher worker thread (send/poll/flush) or librdkafka's own threads
  * (error callback); nothing here runs on the GStreamer streaming thread.
@@ -28,7 +28,7 @@
 #define HEALTH_CHECK_TIMEOUT_MS 1000
 
 typedef struct {
-    PerceptraBackend base;
+    RTVisionBackend base;
     rd_kafka_t *rk;
     gchar *topic;
     gint connected; /* atomic gboolean */
@@ -46,7 +46,7 @@ static void dr_msg_cb(rd_kafka_t *rk, const rd_kafka_message_t *msg, void *opaqu
     KafkaBackend *k = opaque;
     gboolean ok = msg->err == RD_KAFKA_RESP_ERR_NO_ERROR;
     if (k->base.publisher)
-        perceptra_publisher_report_delivery(k->base.publisher, ok);
+        rtvision_publisher_report_delivery(k->base.publisher, ok);
     if (ok)
         set_connected(k, TRUE);
     else
@@ -100,12 +100,12 @@ static gboolean load_properties(rd_kafka_conf_t *conf, const char *path, GError 
     return ok;
 }
 
-static gboolean kafka_send(PerceptraBackend *b, const char *key, const char *data, gsize len,
+static gboolean kafka_send(RTVisionBackend *b, const char *key, const char *data, gsize len,
                            GError **error) {
     KafkaBackend *k = (KafkaBackend *)b;
     for (int attempt = 0; attempt < 2; attempt++) {
         rd_kafka_headers_t *hdrs = rd_kafka_headers_new(2);
-        rd_kafka_header_add(hdrs, "schema", -1, PERCEPTRA_SCHEMA_ID, -1);
+        rd_kafka_header_add(hdrs, "schema", -1, RTVISION_SCHEMA_ID, -1);
         rd_kafka_header_add(hdrs, "content-type", -1, "application/json", -1);
         rd_kafka_resp_err_t err = rd_kafka_producev(
             k->rk, RD_KAFKA_V_TOPIC(k->topic), RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY),
@@ -124,7 +124,7 @@ static gboolean kafka_send(PerceptraBackend *b, const char *key, const char *dat
     return FALSE;
 }
 
-static void kafka_poll(PerceptraBackend *b) {
+static void kafka_poll(RTVisionBackend *b) {
     KafkaBackend *k = (KafkaBackend *)b;
     rd_kafka_poll(k->rk, 0);
     gint64 now = g_get_monotonic_time();
@@ -138,7 +138,7 @@ static void kafka_poll(PerceptraBackend *b) {
     }
 }
 
-static gboolean kafka_flush(PerceptraBackend *b, gint timeout_ms) {
+static gboolean kafka_flush(RTVisionBackend *b, gint timeout_ms) {
     KafkaBackend *k = (KafkaBackend *)b;
     rd_kafka_resp_err_t err = rd_kafka_flush(k->rk, MAX(timeout_ms, 0));
     if (err != RD_KAFKA_RESP_ERR_NO_ERROR)
@@ -147,11 +147,11 @@ static gboolean kafka_flush(PerceptraBackend *b, gint timeout_ms) {
     return err == RD_KAFKA_RESP_ERR_NO_ERROR;
 }
 
-static gboolean kafka_healthy(PerceptraBackend *b) {
+static gboolean kafka_healthy(RTVisionBackend *b) {
     return g_atomic_int_get(&((KafkaBackend *)b)->connected) != 0;
 }
 
-static void kafka_destroy(PerceptraBackend *b) {
+static void kafka_destroy(RTVisionBackend *b) {
     KafkaBackend *k = (KafkaBackend *)b;
     if (k->rk)
         rd_kafka_destroy(k->rk);
@@ -159,7 +159,7 @@ static void kafka_destroy(PerceptraBackend *b) {
     g_free(k);
 }
 
-static const PerceptraBackendOps kafka_ops = {
+static const RTVisionBackendOps kafka_ops = {
     .name = "kafka",
     .async_delivery = TRUE,
     .send = kafka_send,
@@ -169,9 +169,9 @@ static const PerceptraBackendOps kafka_ops = {
     .destroy = kafka_destroy,
 };
 
-PerceptraBackend *perceptra_backend_kafka_new(const char *brokers, const char *topic,
-                                              const char *properties_file, const char *client_id,
-                                              GError **error) {
+RTVisionBackend *rtvision_backend_kafka_new(const char *brokers, const char *topic,
+                                            const char *properties_file, const char *client_id,
+                                            GError **error) {
     if (brokers == NULL || *brokers == '\0' || topic == NULL || *topic == '\0') {
         g_set_error(error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
                     "kafka backend needs brokers and topic");
@@ -183,7 +183,7 @@ PerceptraBackend *perceptra_backend_kafka_new(const char *brokers, const char *t
 
     rd_kafka_conf_t *conf = rd_kafka_conf_new();
     if (!conf_set(conf, "bootstrap.servers", brokers, error) ||
-        !conf_set(conf, "client.id", client_id ? client_id : "perceptra", error) ||
+        !conf_set(conf, "client.id", client_id ? client_id : "rtvision", error) ||
         !load_properties(conf, properties_file, error)) {
         rd_kafka_conf_destroy(conf);
         g_free(k->topic);

@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 typedef struct {
-    PerceptraBackend base;
+    RTVisionBackend base;
     int fd;
     gboolean ok; /* last write succeeded */
 } StreamBackend;
@@ -35,7 +35,7 @@ static gboolean write_all(int fd, const char *data, gsize len, GError **error) {
     return TRUE;
 }
 
-static gboolean stream_send(PerceptraBackend *b, const char *key, const char *data, gsize len,
+static gboolean stream_send(RTVisionBackend *b, const char *key, const char *data, gsize len,
                             GError **error) {
     (void)key;
     StreamBackend *s = (StreamBackend *)b;
@@ -44,7 +44,7 @@ static gboolean stream_send(PerceptraBackend *b, const char *key, const char *da
     return s->ok;
 }
 
-static gboolean stream_flush(PerceptraBackend *b, gint timeout_ms) {
+static gboolean stream_flush(RTVisionBackend *b, gint timeout_ms) {
     (void)timeout_ms;
     StreamBackend *s = (StreamBackend *)b;
     if (fsync(s->fd) != 0 && errno != EINVAL && errno != EROFS)
@@ -52,18 +52,18 @@ static gboolean stream_flush(PerceptraBackend *b, gint timeout_ms) {
     return TRUE;
 }
 
-static gboolean stream_healthy(PerceptraBackend *b) {
+static gboolean stream_healthy(RTVisionBackend *b) {
     return ((StreamBackend *)b)->ok;
 }
 
-static void stream_destroy(PerceptraBackend *b) {
+static void stream_destroy(RTVisionBackend *b) {
     StreamBackend *s = (StreamBackend *)b;
     if (s->fd >= 0)
         close(s->fd);
     g_free(s);
 }
 
-static const PerceptraBackendOps stdout_ops = {
+static const RTVisionBackendOps stdout_ops = {
     .name = "stdout",
     .async_delivery = FALSE,
     .send = stream_send,
@@ -72,7 +72,7 @@ static const PerceptraBackendOps stdout_ops = {
     .destroy = stream_destroy,
 };
 
-static const PerceptraBackendOps file_ops = {
+static const RTVisionBackendOps file_ops = {
     .name = "file",
     .async_delivery = FALSE,
     .send = stream_send,
@@ -81,7 +81,7 @@ static const PerceptraBackendOps file_ops = {
     .destroy = stream_destroy,
 };
 
-PerceptraBackend *perceptra_backend_stream_new_fd(int fd, GError **error) {
+RTVisionBackend *rtvision_backend_stream_new_fd(int fd, GError **error) {
     if (fd < 0) {
         g_set_error(error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "invalid fd");
         return NULL;
@@ -93,7 +93,7 @@ PerceptraBackend *perceptra_backend_stream_new_fd(int fd, GError **error) {
     return &s->base;
 }
 
-PerceptraBackend *perceptra_backend_file_new(const char *path, GError **error) {
+RTVisionBackend *rtvision_backend_file_new(const char *path, GError **error) {
     if (path == NULL || *path == '\0') {
         g_set_error(error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "publish.file.path is empty");
         return NULL;

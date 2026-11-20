@@ -21,9 +21,9 @@
  * limitations under the License.
  */
 
-/* main.c - `perceptra` binary: CLI, pipeline lifecycle, signal handling.
+/* main.c - `rtvision` binary: CLI, pipeline lifecycle, signal handling.
  *
- *   perceptra -c <ds-main.ini|.yml> [-a <app.ini>] [--log-level LEVEL] [--no-force-tcp]
+ *   rtvision -c <ds-main.ini|.yml> [-a <app.ini>] [--log-level LEVEL] [--no-force-tcp]
  *             [--shutdown-timeout S]
  *
  * Lifecycle: parse configs -> task handler + publisher -> create_pipeline() -> PAUSED -> PLAYING
@@ -55,7 +55,7 @@
 #include "task_registry.h"
 #include "timestamps.h"
 
-#define PERCEPTRA_VERSION "0.1.0-dev"
+#define RTVISION_VERSION "0.1.0-dev"
 #define EXIT_RUNTIME_ERROR 1
 #define EXIT_USAGE_ERROR 2
 
@@ -74,7 +74,7 @@ GST_DEBUG_CATEGORY(NVDS_APP);
 static GMainLoop *main_loop = NULL;
 static AppCtx *app_ctx = NULL;
 static gboolean signal_received = FALSE;
-static PerceptraPublisher *publisher = NULL;
+static RTVisionPublisher *publisher = NULL;
 
 static gchar *opt_ds_config = NULL;
 static gchar *opt_app_config = NULL;
@@ -86,7 +86,7 @@ static gint opt_shutdown_timeout_s = DEFAULT_SHUTDOWN_TIMEOUT_S;
 static GOptionEntry option_entries[] = {
     {"config", 'c', 0, G_OPTION_ARG_FILENAME, &opt_ds_config,
      "DeepStream main config (ds-main.ini or .yml)", "FILE"},
-    {"app-config", 'a', 0, G_OPTION_ARG_FILENAME, &opt_app_config, "Perceptra app config (app.ini)",
+    {"app-config", 'a', 0, G_OPTION_ARG_FILENAME, &opt_app_config, "RTVision app config (app.ini)",
      "FILE"},
     {"log-level", 0, 0, G_OPTION_ARG_STRING, &opt_log_level,
      "error|warn|info|debug (overrides app.ini)", "LEVEL"},
@@ -113,7 +113,7 @@ static gboolean on_signal(gpointer user_data) {
 /* The deepstream-app bus callback sets appCtx->quit on EOS (all sources done) or fatal error. */
 static gboolean heartbeat(gpointer user_data) {
     (void)user_data;
-    perceptra_ops_heartbeat(); /* /live */
+    rtvision_ops_heartbeat(); /* /live */
     return G_SOURCE_CONTINUE;
 }
 
@@ -165,28 +165,28 @@ static int take_stdout_for_events(void) {
     return fd;
 }
 
-static PerceptraPublisher *create_publisher(const PerceptraAppConfig *cfg,
-                                            const PerceptraEventContext *ctx, GError **error) {
-    const PerceptraPublishConfig *p = &cfg->publish;
-    PerceptraBackend *backend = NULL;
+static RTVisionPublisher *create_publisher(const RTVisionAppConfig *cfg,
+                                           const RTVisionEventContext *ctx, GError **error) {
+    const RTVisionPublishConfig *p = &cfg->publish;
+    RTVisionBackend *backend = NULL;
     switch (p->backend) {
-    case PERCEPTRA_BACKEND_NONE:
+    case RTVISION_BACKEND_NONE:
         return NULL;
-    case PERCEPTRA_BACKEND_STDOUT:
-        backend = perceptra_backend_stream_new_fd(take_stdout_for_events(), error);
+    case RTVISION_BACKEND_STDOUT:
+        backend = rtvision_backend_stream_new_fd(take_stdout_for_events(), error);
         break;
-    case PERCEPTRA_BACKEND_FILE:
-        backend = perceptra_backend_file_new(p->file_path, error);
+    case RTVISION_BACKEND_FILE:
+        backend = rtvision_backend_file_new(p->file_path, error);
         break;
-    case PERCEPTRA_BACKEND_KAFKA:
-        backend = perceptra_backend_kafka_new(p->kafka_brokers, p->kafka_topic,
-                                              p->kafka_properties_file, cfg->service_name, error);
+    case RTVISION_BACKEND_KAFKA:
+        backend = rtvision_backend_kafka_new(p->kafka_brokers, p->kafka_topic,
+                                             p->kafka_properties_file, cfg->service_name, error);
         break;
     }
     if (backend == NULL)
         return NULL;
-    return perceptra_publisher_new(backend, ctx, p->queue_max_events, p->on_full,
-                                   p->backend == PERCEPTRA_BACKEND_KAFKA && p->kafka_key_sensor_id);
+    return rtvision_publisher_new(backend, ctx, p->queue_max_events, p->on_full,
+                                  p->backend == RTVISION_BACKEND_KAFKA && p->kafka_key_sensor_id);
 }
 
 static gboolean is_yaml(const char *path) {
@@ -203,7 +203,7 @@ static void apply_force_tcp(NvDsConfig *config) {
 
 static int parse_cli(int *argc, char ***argv) {
     GError *error = NULL;
-    GOptionContext *ctx = g_option_context_new("- Perceptra multi-stream detection service");
+    GOptionContext *ctx = g_option_context_new("- RTVision multi-stream detection service");
     g_option_context_add_main_entries(ctx, option_entries, NULL);
     g_option_context_add_group(ctx, gst_init_get_option_group());
     gboolean ok = g_option_context_parse(ctx, argc, argv, &error);
@@ -223,22 +223,22 @@ static int parse_cli(int *argc, char ***argv) {
 
 int main(int argc, char *argv[]) {
     int exit_code = 0;
-    PerceptraAppConfig app_cfg;
-    perceptra_app_config_init(&app_cfg);
+    RTVisionAppConfig app_cfg;
+    rtvision_app_config_init(&app_cfg);
 
     if (parse_cli(&argc, &argv) != 0) {
         exit_code = EXIT_USAGE_ERROR;
         goto done;
     }
     if (opt_version) {
-        g_print("perceptra %s\n", PERCEPTRA_VERSION);
+        g_print("rtvision %s\n", RTVISION_VERSION);
         goto done;
     }
     GST_DEBUG_CATEGORY_INIT(NVDS_APP, "NVDS_APP", 0, NULL);
 
     if (opt_app_config) {
         GError *error = NULL;
-        if (!perceptra_app_config_load(opt_app_config, &app_cfg, &error)) {
+        if (!rtvision_app_config_load(opt_app_config, &app_cfg, &error)) {
             PLOG_ERROR("main", "event=config_error file=%s error=\"%s\"", opt_app_config,
                        error->message);
             g_clear_error(&error);
@@ -246,22 +246,22 @@ int main(int argc, char *argv[]) {
             goto done;
         }
     }
-    perceptra_log_set_level(app_cfg.log_level);
+    rtvision_log_set_level(app_cfg.log_level);
     if (opt_log_level) {
-        PerceptraLogLevel level;
-        if (!perceptra_log_parse_level(opt_log_level, &level)) {
+        RTVisionLogLevel level;
+        if (!rtvision_log_parse_level(opt_log_level, &level)) {
             PLOG_ERROR("main", "event=usage_error error=\"invalid --log-level '%s'\"",
                        opt_log_level);
             exit_code = EXIT_USAGE_ERROR;
             goto done;
         }
-        perceptra_log_set_level(level);
+        rtvision_log_set_level(level);
     }
 
     PLOG_INFO("main",
               "event=starting version=%s ds_config=%s app_config=%s model=%s model_version=%s "
               "task=%s family=%s force_tcp=%d",
-              PERCEPTRA_VERSION, opt_ds_config, opt_app_config ? opt_app_config : "-",
+              RTVISION_VERSION, opt_ds_config, opt_app_config ? opt_app_config : "-",
               app_cfg.model_name, app_cfg.model_version, app_cfg.model_task, app_cfg.model_family,
               opt_force_tcp);
 
@@ -283,7 +283,7 @@ int main(int argc, char *argv[]) {
     if (opt_force_tcp)
         apply_force_tcp(&app_ctx->config);
 
-    const PerceptraTaskHandler *handler = perceptra_task_get(app_cfg.model_task);
+    const RTVisionTaskHandler *handler = rtvision_task_get(app_cfg.model_task);
     GError *task_error = NULL;
     if (handler == NULL || !handler->init(&task_error)) {
         PLOG_ERROR("main", "event=config_error error=\"task '%s': %s\"", app_cfg.model_task,
@@ -292,13 +292,13 @@ int main(int argc, char *argv[]) {
         exit_code = EXIT_USAGE_ERROR;
         goto done;
     }
-    perceptra_timestamps_init(app_cfg.timestamp_source);
-    perceptra_embeddings_init(app_cfg.publish.include_embeddings, app_cfg.tracker_reid_store_age);
+    rtvision_timestamps_init(app_cfg.timestamp_source);
+    rtvision_embeddings_init(app_cfg.publish.include_embeddings, app_cfg.tracker_reid_store_age);
     PLOG_INFO("main", "event=events_config timestamps=%s embeddings=%d reid_store_age=%u",
-              perceptra_timestamp_source_name(app_cfg.timestamp_source),
+              rtvision_timestamp_source_name(app_cfg.timestamp_source),
               app_cfg.publish.include_embeddings, app_cfg.tracker_reid_store_age);
 
-    const PerceptraEventContext event_ctx = {
+    const RTVisionEventContext event_ctx = {
         .service = app_cfg.service_name,
         .model_name = app_cfg.model_name,
         .model_version = app_cfg.model_version,
@@ -308,7 +308,7 @@ int main(int argc, char *argv[]) {
     publisher = create_publisher(&app_cfg, &event_ctx, &pub_error);
     if (pub_error) {
         PLOG_ERROR("main", "event=publisher_error backend=%s error=\"%s\"",
-                   perceptra_backend_kind_name(app_cfg.publish.backend), pub_error->message);
+                   rtvision_backend_kind_name(app_cfg.publish.backend), pub_error->message);
         g_clear_error(&pub_error);
         exit_code = EXIT_USAGE_ERROR;
         goto done;
@@ -316,20 +316,20 @@ int main(int argc, char *argv[]) {
     if (publisher == NULL)
         PLOG_WARN("main", "event=no_publisher reason=\"[publish] backend not set\"");
 
-    const PerceptraProbeConfig probe_cfg = {
+    const RTVisionProbeConfig probe_cfg = {
         .log_every_n_frames = app_cfg.probe_log_every_n_frames,
         .publisher = publisher,
         .handler = handler,
         .interval_frames = app_cfg.publish.interval_frames,
         .include_empty_frames = app_cfg.publish.include_empty_frames,
     };
-    perceptra_probe_init(&probe_cfg);
+    rtvision_probe_init(&probe_cfg);
 
     /* Ops server first: /startup answers 503 while the pipeline (and TensorRT engine) builds. */
     if (app_cfg.ops_port > 0) {
         GError *ops_error = NULL;
-        if (!perceptra_ops_start(app_cfg.ops_port, &app_cfg, publisher, PERCEPTRA_VERSION,
-                                 &ops_error)) {
+        if (!rtvision_ops_start(app_cfg.ops_port, &app_cfg, publisher, RTVISION_VERSION,
+                                &ops_error)) {
             PLOG_ERROR("main", "event=ops_error port=%u error=\"%s\"", app_cfg.ops_port,
                        ops_error->message);
             g_clear_error(&ops_error);
@@ -338,7 +338,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (!create_pipeline(app_ctx, perceptra_probe, NULL, perceptra_perf_cb, NULL)) {
+    if (!create_pipeline(app_ctx, rtvision_probe, NULL, rtvision_perf_cb, NULL)) {
         PLOG_ERROR("main", "event=pipeline_error error=\"create_pipeline failed\"");
         exit_code = EXIT_RUNTIME_ERROR;
         goto done;
@@ -346,7 +346,7 @@ int main(int argc, char *argv[]) {
 
     if (app_cfg.hot_swap_file) {
         GError *ota_error = NULL;
-        if (!perceptra_ota_start(app_ctx, app_cfg.hot_swap_file, &ota_error)) {
+        if (!rtvision_ota_start(app_ctx, app_cfg.hot_swap_file, &ota_error)) {
             PLOG_ERROR("main", "event=config_error error=\"hot swap: %s\"", ota_error->message);
             g_clear_error(&ota_error);
             exit_code = EXIT_USAGE_ERROR;
@@ -380,9 +380,9 @@ int main(int argc, char *argv[]) {
               app_ctx->config.max_batch_size,
               app_ctx->config.http_ip ? app_ctx->config.http_ip : "-",
               app_ctx->config.http_port ? app_ctx->config.http_port : "-");
-    perceptra_ops_heartbeat();
-    perceptra_ops_set_started();
-    perceptra_ops_set_playing(TRUE);
+    rtvision_ops_heartbeat();
+    rtvision_ops_set_started();
+    rtvision_ops_set_playing(TRUE);
 
     g_main_loop_run(main_loop);
 
@@ -395,17 +395,17 @@ done:
     if (app_ctx && app_ctx->pipeline.pipeline)
         arm_shutdown_watchdog(exit_code); /* bounds flush + teardown */
     /* 0. not ready  1. no new events  2. flush the publisher  3. tear down the pipeline */
-    perceptra_ops_set_playing(FALSE);
-    perceptra_probe_stop_events();
-    perceptra_ota_stop();
+    rtvision_ops_set_playing(FALSE);
+    rtvision_probe_stop_events();
+    rtvision_ota_stop();
     if (publisher) {
         guint budget = app_cfg.publish.shutdown_flush_timeout_ms;
         if (opt_shutdown_timeout_s > 0) /* keep >= 2 s of the watchdog budget for teardown */
             budget = MIN(budget, (guint)MAX(opt_shutdown_timeout_s * 1000 - 2000, 0));
         PLOG_INFO("main", "event=shutdown stage=flush_publisher timeout_ms=%u", budget);
-        perceptra_publisher_shutdown(publisher, budget);
+        rtvision_publisher_shutdown(publisher, budget);
     }
-    perceptra_ops_stop(); /* before the publisher it reads is freed */
+    rtvision_ops_stop(); /* before the publisher it reads is freed */
     if (app_ctx) {
         if (app_ctx->pipeline.pipeline) {
             PLOG_INFO("main", "event=shutdown stage=destroy_pipeline timeout_s=%d",
@@ -416,11 +416,11 @@ done:
         g_free(app_ctx);
         app_ctx = NULL;
     }
-    g_clear_pointer(&publisher, perceptra_publisher_free);
-    perceptra_embeddings_shutdown();
+    g_clear_pointer(&publisher, rtvision_publisher_free);
+    rtvision_embeddings_shutdown();
     if (main_loop)
         g_main_loop_unref(main_loop);
-    perceptra_app_config_clear(&app_cfg);
+    rtvision_app_config_clear(&app_cfg);
     g_free(opt_ds_config);
     g_free(opt_app_config);
     g_free(opt_log_level);

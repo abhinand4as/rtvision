@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 Abhinand A S
-"""Shared fixtures for the perceptra_tools tests."""
+"""Shared fixtures for the rtvision_tools tests."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ REPO = Path(__file__).resolve().parents[2]
 EXAMPLES = REPO / "models" / "examples"
 # Models used only by tests (e.g. a non-permissive licence for the licence gate).
 FIXTURE_MODELS = REPO / "tests" / "python" / "fixtures" / "models"
-EXAMPLE_CONFIG = REPO / "config" / "perceptra.example.yaml"
+EXAMPLE_CONFIG = REPO / "config" / "rtvision.example.yaml"
 GOLDEN = REPO / "tests" / "golden"
 
 

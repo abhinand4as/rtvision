@@ -2,7 +2,7 @@
 # RF-DETR → ONNX export
 
 `export.sh` exports a pretrained RF-DETR detector to ONNX for the `detr` parser family. It runs on
-the host (CPU is enough) in its own virtualenv and is never part of the Perceptra image.
+the host (CPU is enough) in its own virtualenv and is never part of the RTVision image.
 
 ```bash
 tools/export/rfdetr/export.sh                 # Small -> models/examples/rfdetr-s-coco/rfdetr-small.onnx

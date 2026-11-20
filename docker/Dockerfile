@@ -2,16 +2,16 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 Abhinand A S
 #
-# Two-stage Perceptra image on public NVIDIA DeepStream.
-#   build:   compiles the `perceptra` binary against the deepstream-app/apps-common sources and
+# Two-stage RTVision image on public NVIDIA DeepStream.
+#   build:   compiles the `rtvision` binary against the deepstream-app/apps-common sources and
 #            headers that ship INSIDE the base image (never vendored, docs/LICENSING.md §3).
-#   runtime: DeepStream runtime + the binary + libperceptra_parsers.so + configs.
-# Build (from the repo root):  docker build -f docker/Dockerfile -t perceptra:local .
+#   runtime: DeepStream runtime + the binary + librtvision_parsers.so + configs.
+# Build (from the repo root):  docker build -f docker/Dockerfile -t rtvision:local .
 # The resulting image contains NVIDIA software under NVIDIA's terms; do not publish it
 # (docs/LICENSING.md §4).
 #
-# Entry point: entrypoint.sh -> perceptra-run (validates perceptra.yaml + model.yaml, generates
-# the DeepStream configs, execs the binary). Runs as the non-root user `perceptra` (uid 1000).
+# Entry point: entrypoint.sh -> rtvision-run (validates rtvision.yaml + model.yaml, generates
+# the DeepStream configs, execs the binary). Runs as the non-root user `rtvision` (uid 1000).
 
 ARG DS_IMAGE=nvcr.io/nvidia/deepstream:9.1-samples-multiarch
 
@@ -45,25 +45,25 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends librdkafka1 libsoup-3.0-0 libjson-glib-1.0-0; \
     rm -rf /var/lib/apt/lists/*
 
-# Python tools (perceptra-run). The image has no venv/ensurepip, so the package and its
+# Python tools (rtvision-run). The image has no venv/ensurepip, so the package and its
 # dependencies are installed into a private --target dir; system Python stays untouched. The onnx
 # package's bundled backend test models are removed (unused; keeps model files out of the image).
-COPY pyproject.toml README.md /tmp/perceptra-tools/
-COPY tools/perceptra_tools/ /tmp/perceptra-tools/tools/perceptra_tools/
+COPY pyproject.toml README.md /tmp/rtvision-tools/
+COPY tools/rtvision_tools/ /tmp/rtvision-tools/tools/rtvision_tools/
 RUN set -eux; \
-    python3 -m pip install --no-cache-dir --target /opt/perceptra/python /tmp/perceptra-tools; \
-    rm -rf /tmp/perceptra-tools /opt/perceptra/python/onnx/backend/test/data; \
-    mkdir -p /opt/perceptra/bin /opt/perceptra/engines /opt/perceptra/output; \
-    printf '#!/bin/sh\nexec python3 -m perceptra_tools.run "$@"\n' > /opt/perceptra/bin/perceptra-run; \
-    chmod 0755 /opt/perceptra/bin/perceptra-run
+    python3 -m pip install --no-cache-dir --target /opt/rtvision/python /tmp/rtvision-tools; \
+    rm -rf /tmp/rtvision-tools /opt/rtvision/python/onnx/backend/test/data; \
+    mkdir -p /opt/rtvision/bin /opt/rtvision/engines /opt/rtvision/output; \
+    printf '#!/bin/sh\nexec python3 -m rtvision_tools.run "$@"\n' > /opt/rtvision/bin/rtvision-run; \
+    chmod 0755 /opt/rtvision/bin/rtvision-run
 
-COPY --from=build /src/src/app/perceptra /opt/perceptra/bin/perceptra
-COPY --from=build /src/src/parsers/libperceptra_parsers.so /opt/perceptra/lib/libperceptra_parsers.so
-COPY schemas/ /opt/perceptra/schemas/
-COPY models/examples/ /opt/perceptra/models/
-COPY config/perceptra.example.yaml /opt/perceptra/config/perceptra.yaml
+COPY --from=build /src/src/app/rtvision /opt/rtvision/bin/rtvision
+COPY --from=build /src/src/parsers/librtvision_parsers.so /opt/rtvision/lib/librtvision_parsers.so
+COPY schemas/ /opt/rtvision/schemas/
+COPY models/examples/ /opt/rtvision/models/
+COPY config/rtvision.example.yaml /opt/rtvision/config/rtvision.yaml
 
-COPY docker/entrypoint.sh /opt/perceptra/bin/entrypoint.sh
+COPY docker/entrypoint.sh /opt/rtvision/bin/entrypoint.sh
 
 # Non-root user (uid/gid 1000). The base image already has uid 1000 (`ubuntu`): rename it so
 # files written to volumes have a predictable owner. Only the engine cache, the output dir and
@@ -71,28 +71,28 @@ COPY docker/entrypoint.sh /opt/perceptra/bin/entrypoint.sh
 RUN set -eux; \
     if getent passwd 1000 >/dev/null; then \
         old="$(getent passwd 1000 | cut -d: -f1)"; \
-        usermod -l perceptra -d /home/perceptra -m "$old"; \
-        groupmod -n perceptra "$(getent group 1000 | cut -d: -f1)"; \
+        usermod -l rtvision -d /home/rtvision -m "$old"; \
+        groupmod -n rtvision "$(getent group 1000 | cut -d: -f1)"; \
     else \
-        groupadd -g 1000 perceptra; useradd -u 1000 -g 1000 -m -d /home/perceptra perceptra; \
+        groupadd -g 1000 rtvision; useradd -u 1000 -g 1000 -m -d /home/rtvision rtvision; \
     fi; \
-    chown -R 1000:1000 /opt/perceptra/engines /opt/perceptra/output; \
-    chmod 0755 /opt/perceptra/bin/entrypoint.sh
+    chown -R 1000:1000 /opt/rtvision/engines /opt/rtvision/output; \
+    chmod 0755 /opt/rtvision/bin/entrypoint.sh
 
-ENV PATH=/opt/perceptra/bin:${PATH} \
-    PYTHONPATH=/opt/perceptra/python \
-    PERCEPTRA_SCHEMA_DIR=/opt/perceptra/schemas \
-    HOME=/home/perceptra
+ENV PATH=/opt/rtvision/bin:${PATH} \
+    PYTHONPATH=/opt/rtvision/python \
+    RTVISION_SCHEMA_DIR=/opt/rtvision/schemas \
+    HOME=/home/rtvision
 EXPOSE 9000 9464
 STOPSIGNAL SIGTERM
 USER 1000:1000
-WORKDIR /home/perceptra
+WORKDIR /home/rtvision
 
 # /live answers 200 from the moment the binary starts (also while TensorRT builds the engine,
 # see docs/DEVIATIONS.md #26); /startup and /ready are for orchestrators that support them.
 HEALTHCHECK --interval=15s --timeout=3s --start-period=60s --retries=3 \
-    CMD curl -fsS -o /dev/null "http://127.0.0.1:${PERCEPTRA__OBSERVABILITY__OPS_PORT:-9464}/live" || exit 1
+    CMD curl -fsS -o /dev/null "http://127.0.0.1:${RTVISION__OBSERVABILITY__OPS_PORT:-9464}/live" || exit 1
 
-# Select the model with PERCEPTRA_MODEL (name under /opt/perceptra/models or a path).
-# `docker run IMAGE --dry-run` passes flags to perceptra-run; `docker run IMAGE bash` runs bash.
+# Select the model with RTVISION_MODEL (name under /opt/rtvision/models or a path).
+# `docker run IMAGE --dry-run` passes flags to rtvision-run; `docker run IMAGE bash` runs bash.
 ENTRYPOINT ["entrypoint.sh"]

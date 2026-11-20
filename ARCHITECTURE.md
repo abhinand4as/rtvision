@@ -1,12 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Perceptra — Architecture
+# RTVision — Architecture
 
-**Perceptra** is a real-time, multi-stream video perception microservice. It ingests many camera streams (RTSP or files) that are added and removed at runtime through a REST API. It runs a **configurable object-detection model** on the GPU, tracks objects across frames, and publishes one structured JSON event per sampled frame to Kafka (or stdout/file).
+**RTVision** is a real-time, multi-stream video perception microservice. It ingests many camera streams (RTSP or files) that are added and removed at runtime through a REST API. It runs a **configurable object-detection model** on the GPU, tracks objects across frames, and publishes one structured JSON event per sampled frame to Kafka (or stdout/file).
 
 - **v1 scope:** 2D object detection + multi-object tracking.
 - **Designed-in extension points:** instance segmentation, pose, secondary classifiers, zone/line analytics (see [docs/ROADMAP.md](docs/ROADMAP.md)).
 
-The architecture is derived from NVIDIA's RT-CV microservice (`services/rtvi/rt-cv` in `NVIDIA-AI-Blueprints/video-search-and-summarization`, Apache-2.0). Perceptra keeps RT-CV's proven runtime shape and replaces the model-specific and closed-schema parts with generic, configurable and open components.
+The architecture is derived from NVIDIA's RT-CV microservice (`services/rtvi/rt-cv` in `NVIDIA-AI-Blueprints/video-search-and-summarization`, Apache-2.0). RTVision keeps RT-CV's proven runtime shape and replaces the model-specific and closed-schema parts with generic, configurable and open components.
 
 > Status: specification for implementation. Build order and acceptance criteria are in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md). Rules for the implementing agent are in [CLAUDE.md](CLAUDE.md).
 
@@ -39,8 +39,8 @@ flowchart LR
     FILE[Video files<br/>file://] --> P
     ORCH[Orchestrator / VMS / operator] -- REST :9000<br/>stream add/remove --> P
     MON[Prometheus / k8s probes] -- HTTP :9464<br/>/metrics /live /ready --> P
-    REG[(Model registry volume<br/>/opt/perceptra/models)] --> P
-    P[Perceptra container] -- JSON events<br/>topic per model --> K[(Kafka)]
+    REG[(Model registry volume<br/>/opt/rtvision/models)] --> P
+    P[RTVision container] -- JSON events<br/>topic per model --> K[(Kafka)]
     K --> C1[Counting / occupancy]
     K --> C2[Alerts / rules]
     K --> C3[Storage / search]
@@ -58,22 +58,22 @@ flowchart TB
     REST_CLIENT[REST client]
   end
 
-  subgraph PC[Perceptra container]
+  subgraph PC[RTVision container]
     direction TB
     subgraph CTRL[Control plane]
       RESTSRV[Stream REST server :9000<br/>nvmultiurisrcbin built-in]
       OPS[Ops HTTP server :9464<br/>/live /ready /startup /metrics<br/>libsoup]
-      CFG[perceptra-run entrypoint<br/>gen_configs.py: perceptra.yaml + model.yaml<br/>→ DeepStream + app configs]
+      CFG[rtvision-run entrypoint<br/>gen_configs.py: rtvision.yaml + model.yaml<br/>→ DeepStream + app configs]
     end
     subgraph PIPE[GStreamer / DeepStream pipeline]
       direction LR
       SRC[nvurisrcbin × N<br/>NVDEC decode] --> MUX[nvstreammux<br/>batch ≤ max_streams]
       MUX --> PGIE[nvinfer + TensorRT<br/>detector engine]
       PGIE --> TRK[nvtracker<br/>NvDCF / NvSORT / IOU]
-      TRK --> PROBE[Perceptra probe<br/>task dispatch → event builder]
+      TRK --> PROBE[RTVision probe<br/>task dispatch → event builder]
       PROBE --> TEE[tee → fakesink / OSD display / file]
     end
-    PARSER[libperceptra_parsers.so<br/>output-family decoders] -.-> PGIE
+    PARSER[librtvision_parsers.so<br/>output-family decoders] -.-> PGIE
     PROBE --> Q[Bounded event queue]
     Q --> PUB[Publisher thread<br/>Kafka · stdout · file]
     PERF[perf + metrics collector] --> OPS
@@ -91,11 +91,11 @@ flowchart TB
 
 | Component | Source | Responsibility |
 |---|---|---|
-| `perceptra-run` (Python) | new | Entrypoint. Validates `perceptra.yaml` and `model.yaml` against JSON Schemas, inspects the ONNX output shapes, generates DeepStream configs and `app.ini`, sets env vars, then `exec`s the C binary. |
-| `perceptra` (C binary) | derived from RT-CV `metropolis_perception_app.c` | Pipeline lifecycle, CLI, signal handling, probe registration, perf callback, model hot-swap thread. |
+| `rtvision-run` (Python) | new | Entrypoint. Validates `rtvision.yaml` and `model.yaml` against JSON Schemas, inspects the ONNX output shapes, generates DeepStream configs and `app.ini`, sets env vars, then `exec`s the C binary. |
+| `rtvision` (C binary) | derived from RT-CV `metropolis_perception_app.c` | Pipeline lifecycle, CLI, signal handling, probe registration, perf callback, model hot-swap thread. |
 | Stream REST server | DeepStream `nvmultiurisrcbin` | `POST /api/v1/stream/add`, `POST /api/v1/stream/remove` (DeepStream's documented payload). |
 | Ops HTTP server | new (libsoup-3.0) | `/live`, `/ready`, `/startup`, `/metrics` (Prometheus text format). Runs independently of DeepStream's REST server. |
-| `nvinfer` + parser library | DeepStream + new `libperceptra_parsers.so` | Pre-processing (resize, letterbox, normalise), TensorRT inference, and output decoding by family. |
+| `nvinfer` + parser library | DeepStream + new `librtvision_parsers.so` | Pre-processing (resize, letterbox, normalise), TensorRT inference, and output decoding by family. |
 | `nvtracker` | DeepStream | Track IDs; optional ReID features. Profile chosen in config. |
 | Probe + event builder | new (ideas ported from RT-CV) | Per-frame sampling, bbox rescaling to source resolution, timestamps, embeddings, task dispatch, event structs. |
 | Serializer | new (json-glib) | Event struct → JSON matching `schemas/detection_event.v1.schema.json`. |
@@ -103,10 +103,10 @@ flowchart TB
 
 ### 3.2 What was kept, changed and dropped vs RT-CV
 
-| RT-CV element | Perceptra | Reason |
+| RT-CV element | RTVision | Reason |
 |---|---|---|
 | nvmultiurisrcbin, nvstreammux, nvinfer, nvtracker | **kept** | Proven multi-stream GPU path. |
-| `bbox_generated_probe_after_analytics` | **rewritten** as `perceptra_probe` with task dispatch | Removes the hard-coded model enum (`-m 0..7`); adds an extension point for segmentation. |
+| `bbox_generated_probe_after_analytics` | **rewritten** as `rtvision_probe` with task dispatch | Removes the hard-coded model enum (`-m 0..7`); adds an extension point for segmentation. |
 | `nvmsgconv` + `nvmsgbroker` (mega2d/mega protobuf) | **replaced** by own serializer + librdkafka publisher | The schema belongs to this project, is documented, and can carry masks later; avoids depending on closed converter libraries. |
 | `msgapi_init_early`, `g_nvds_last_error_message` | **dropped** | They come from NVIDIA's internal RTVI base image, not public DeepStream. Startup errors go to logs and `/startup`. |
 | Health endpoints on the stream REST server | **moved** to our own ops server | Not guaranteed in public DeepStream; our server also serves metrics. |
@@ -124,17 +124,17 @@ flowchart TB
 sequenceDiagram
     autonumber
     actor Op as Operator / Orchestrator
-    participant Run as perceptra-run
-    participant App as perceptra (C)
+    participant Run as rtvision-run
+    participant App as rtvision (C)
     participant DS as DeepStream pipeline
     participant REST as Stream REST :9000
     participant Ops as Ops HTTP :9464
 
-    Op->>Run: docker run ... (PERCEPTRA_MODEL=rfdetr-s-people)
-    Run->>Run: validate perceptra.yaml + model.yaml (JSON Schema)
+    Op->>Run: docker run ... (RTVISION_MODEL=rfdetr-s-people)
+    Run->>Run: validate rtvision.yaml + model.yaml (JSON Schema)
     Run->>Run: inspect ONNX outputs vs declared family
     Run->>Run: render ds-main.txt, pgie.txt, app.ini, parser.ini
-    Run->>App: exec perceptra -c ds-main.txt -a app.ini
+    Run->>App: exec rtvision -c ds-main.txt -a app.ini
     App->>Ops: start ops server (startup=false, ready=false)
     App->>DS: create_pipeline(probe, perf_cb)
     DS->>REST: start REST server (0 streams)
@@ -159,9 +159,9 @@ sequenceDiagram
     autonumber
     participant Mux as nvstreammux
     participant Inf as nvinfer
-    participant Prs as perceptra parser lib
+    participant Prs as rtvision parser lib
     participant Trk as nvtracker
-    participant Probe as perceptra_probe
+    participant Probe as rtvision_probe
     participant Q as event queue
     participant Pub as publisher thread
     participant K as Kafka
@@ -176,7 +176,7 @@ sequenceDiagram
         Trk->>Probe: NvDsBatchMeta (frames, objects, track ids, ReID)
         alt frame selected by interval_frames
             Probe->>Probe: task handler (detect): rescale bbox to source res, timestamp, embedding
-            Probe->>Q: PerceptraFrameEvent (non-blocking enqueue)
+            Probe->>Q: RTVisionFrameEvent (non-blocking enqueue)
         end
     end
     loop publisher thread
@@ -186,7 +186,7 @@ sequenceDiagram
     end
 ```
 
-The probe runs on the streaming thread, so it **must never block**. Serialization and network I/O happen on the publisher thread. When the queue is full, the configured policy applies (`drop_oldest` by default) and `perceptra_events_dropped_total` is incremented.
+The probe runs on the streaming thread, so it **must never block**. Serialization and network I/O happen on the publisher thread. When the queue is full, the configured policy applies (`drop_oldest` by default) and `rtvision_events_dropped_total` is incremented.
 
 ---
 
@@ -214,8 +214,8 @@ The full parser contract is in [docs/PARSERS.md](docs/PARSERS.md), and the `mode
 ### 5.2 Parser library design
 
 - `src/parsers/core/` — **pure C++17, no DeepStream headers.** Decoders take raw float buffers plus shapes plus `ParseParams` and return `std::vector<Detection>`. They are unit-tested in CI without a GPU.
-- `src/parsers/ds_adapter.cpp` — thin DeepStream adapter exporting `NvDsInferParsePerceptra_<Family>` functions (`CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE`).
-- Family parameters such as layer names, box format and activation come from `parser.ini`. The generator writes this file and the adapter reads it once, via env var `PERCEPTRA_PARSER_CONFIG`. nvinfer has no way to pass custom parameters to a parser, so this file is the channel.
+- `src/parsers/ds_adapter.cpp` — thin DeepStream adapter exporting `NvDsInferParseRTVision_<Family>` functions (`CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE`).
+- Family parameters such as layer names, box format and activation come from `parser.ini`. The generator writes this file and the adapter reads it once, via env var `RTVISION_PARSER_CONFIG`. nvinfer has no way to pass custom parameters to a parser, so this file is the channel.
 
 ### 5.3 Model hot swap
 
@@ -229,13 +229,13 @@ The RT-CV OTA mechanism is ported: an inotify watcher on an override file trigge
 - **REST:** [docs/API.md](docs/API.md).
 - **Config:** [docs/CONFIGURATION.md](docs/CONFIGURATION.md), `schemas/service_config.schema.json`, `schemas/model.schema.json`.
 
-Schema versioning: the `schema` field is `perceptra.detection.v1`. Additive optional fields keep v1. Breaking changes create `v2`, published on a new topic or under a header flag.
+Schema versioning: the `schema` field is `rtvision.detection.v1`. Additive optional fields keep v1. Breaking changes create `v2`, published on a new topic or under a header flag.
 
 ---
 
 ## 7. Timestamps
 
-Per-stream source, selected in `perceptra.yaml` (`timestamps.source`):
+Per-stream source, selected in `rtvision.yaml` (`timestamps.source`):
 
 | Source | Use case | Origin |
 |---|---|---|
@@ -251,14 +251,14 @@ Format: RFC 3339 UTC with milliseconds, e.g. `2026-11-20T06:30:00.123Z`. The eve
 
 | Metric (Prometheus) | Type | Labels |
 |---|---|---|
-| `perceptra_stream_fps` | gauge | `sensor_id` |
-| `perceptra_streams_active` | gauge | — |
-| `perceptra_frames_processed_total` | counter | `sensor_id` |
-| `perceptra_objects_detected_total` | counter | `sensor_id`, `label` |
-| `perceptra_events_enqueued_total` / `_published_total` / `_dropped_total` / `_failed_total` | counter | — |
-| `perceptra_publish_queue_depth` | gauge | — |
-| `perceptra_model_info` | gauge (=1) | `name`, `version`, `task`, `family`, `precision` |
-| `perceptra_model_swaps_total` | counter | `result` |
+| `rtvision_stream_fps` | gauge | `sensor_id` |
+| `rtvision_streams_active` | gauge | — |
+| `rtvision_frames_processed_total` | counter | `sensor_id` |
+| `rtvision_objects_detected_total` | counter | `sensor_id`, `label` |
+| `rtvision_events_enqueued_total` / `_published_total` / `_dropped_total` / `_failed_total` | counter | — |
+| `rtvision_publish_queue_depth` | gauge | — |
+| `rtvision_model_info` | gauge (=1) | `name`, `version`, `task`, `family`, `precision` |
+| `rtvision_model_swaps_total` | counter | `result` |
 
 Health endpoints:
 - `/startup` → 200 once the configs are parsed and the pipeline reaches PLAYING.
@@ -273,9 +273,9 @@ Logs are line-oriented `key=value`, with levels `error|warn|info|debug`.
 
 - **Base image:** public `nvcr.io/nvidia/deepstream:9.1-samples-multiarch` (configurable `ARG`). Two-stage Dockerfile: the build stage compiles the C binary and the parser library against the DeepStream sources/headers in the image; the runtime stage holds the binaries, Python tools and runtime libs.
 - **Runs as non-root (uid 1000).**
-- **Volumes:** `/opt/perceptra/models` (ONNX, labels, `model.yaml`), `/opt/perceptra/engines` (TensorRT engine cache), `/opt/perceptra/config` (`perceptra.yaml`).
+- **Volumes:** `/opt/rtvision/models` (ONNX, labels, `model.yaml`), `/opt/rtvision/engines` (TensorRT engine cache), `/opt/rtvision/config` (`rtvision.yaml`).
 - **Ports:** `9000` stream REST, `9464` ops/metrics.
-- **Compose stack** for development and integration tests: `kafka` (apache/kafka, KRaft) + `perceptra`.
+- **Compose stack** for development and integration tests: `kafka` (apache/kafka, KRaft) + `rtvision`.
 - **Hardware:** NVIDIA dGPU on x86_64 (v1 target). Jetson and ARM SBSA are roadmap items (the same image family is multi-arch, but they are not validated in v1).
 
 ---

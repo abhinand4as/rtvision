@@ -9,7 +9,7 @@
 
 #include <cmath>
 
-namespace perceptra {
+namespace rtvision {
 
 std::vector<Detection> decode_yolo_e2e(const std::vector<TensorView> &t, const ParseParams &p) {
     if (t.size() != 1)
@@ -37,4 +37,4 @@ std::vector<Detection> decode_yolo_e2e(const std::vector<TensorView> &t, const P
     return out;
 }
 
-} // namespace perceptra
+} // namespace rtvision

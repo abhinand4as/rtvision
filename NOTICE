@@ -1,4 +1,4 @@
-Perceptra
+RTVision
 Copyright (c) 2026 Abhinand A S
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
@@ -26,7 +26,7 @@ Derived files (each carries the original notice and a modification notice):
 -------------------------------------------------------------------------------
 Runtime platform
 -------------------------------------------------------------------------------
-Perceptra is built to run on NVIDIA DeepStream SDK, TensorRT and CUDA, which are
+RTVision is built to run on NVIDIA DeepStream SDK, TensorRT and CUDA, which are
 NOT part of this repository and are licensed separately by NVIDIA. At build time
 the binary is compiled against DeepStream sample application sources provided
 inside the NVIDIA DeepStream container image; those sources are governed by their

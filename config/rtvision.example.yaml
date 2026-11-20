@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
-# Example service configuration. Copy to /opt/perceptra/config/perceptra.yaml.
+# Example service configuration. Copy to /opt/rtvision/config/rtvision.yaml.
 service:
-  name: perceptra
+  name: rtvision
   gpu_id: 0
   max_streams: 4
   http_ip: 0.0.0.0
@@ -12,7 +12,7 @@ service:
 inference:
   interval: 0
   precision: null
-  hot_swap_file: null            # e.g. /opt/perceptra/config/hot-swap.ini
+  hot_swap_file: null            # e.g. /opt/rtvision/config/hot-swap.ini
 
 tracker:
   profile: nvdcf_perf

@@ -9,7 +9,7 @@
 #include "test_harness.hpp"
 #include "test_util.hpp"
 
-using namespace perceptra;
+using namespace rtvision;
 
 static ParseParams detr_params(int C, Activation act, bool bg) {
     ParseParams p = tu::params(C);

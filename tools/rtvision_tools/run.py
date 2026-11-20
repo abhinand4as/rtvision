@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 Abhinand A S
-"""``perceptra-run``: validate configs, generate DeepStream configs, then exec the binary.
+"""``rtvision-run``: validate configs, generate DeepStream configs, then exec the binary.
 
-Steps: resolve files (CLI > env > default) -> load + env-override + validate perceptra.yaml ->
+Steps: resolve files (CLI > env > default) -> load + env-override + validate rtvision.yaml ->
 resolve + validate model.yaml -> reject unsupported tasks -> licence gate -> inspect the ONNX
 against the declared family -> generate ds-main.ini / pgie.ini / parser.ini / app.ini ->
-prepare the engine cache -> export PERCEPTRA_PARSER_CONFIG -> ``os.execv`` the binary.
+prepare the engine cache -> export RTVISION_PARSER_CONFIG -> ``os.execv`` the binary.
 
 Exit codes: 2 configuration error, 3 model licence not accepted (docs/CONFIGURATION.md).
 """
@@ -27,11 +27,11 @@ from .schemas import ConfigError, load_model_config, load_service_config
 EXIT_CONFIG = 2
 EXIT_LICENSE = 3
 
-DEFAULT_CONFIG = "/opt/perceptra/config/perceptra.yaml"
-DEFAULT_MODELS_DIR = "/opt/perceptra/models"
-DEFAULT_ENGINE_DIR = "/opt/perceptra/engines"
-DEFAULT_OUT_DIR = "/tmp/perceptra/generated"
-DEFAULT_BINARY = "/opt/perceptra/bin/perceptra"
+DEFAULT_CONFIG = "/opt/rtvision/config/rtvision.yaml"
+DEFAULT_MODELS_DIR = "/opt/rtvision/models"
+DEFAULT_ENGINE_DIR = "/opt/rtvision/engines"
+DEFAULT_OUT_DIR = "/tmp/rtvision/generated"
+DEFAULT_BINARY = "/opt/rtvision/bin/rtvision"
 
 PERMISSIVE_LICENSES = frozenset(
     {"Apache-2.0", "MIT", "BSD-2-Clause", "BSD-3-Clause", "CC0-1.0", "CC-BY-4.0"}
@@ -72,8 +72,8 @@ def resolve_model(model: str, models_dir: Path) -> tuple[Path, Path]:
 
 def detect_trt_version(env: Mapping[str, str]) -> str:
     """TensorRT version for the engine cache name: env override, header, dpkg, else 'unknown'."""
-    if env.get("PERCEPTRA_TRT_VERSION"):
-        return env["PERCEPTRA_TRT_VERSION"]
+    if env.get("RTVISION_TRT_VERSION"):
+        return env["RTVISION_TRT_VERSION"]
     try:
         text = Path(TRT_VERSION_HEADER).read_text(encoding="utf-8")
         parts = [
@@ -104,7 +104,7 @@ def license_gate(spdx: str, env: Mapping[str, str]) -> str | None:
     """Returns the accepted licence id, or None if the model must not start."""
     if spdx in PERMISSIVE_LICENSES:
         return spdx
-    accepted = env.get("PERCEPTRA_ACCEPT_MODEL_LICENSE", "")
+    accepted = env.get("RTVISION_ACCEPT_MODEL_LICENSE", "")
     lines = [
         f"MODEL LICENCE: {spdx}",
         "The model weights are not under a permissive licence on the allow-list",
@@ -112,9 +112,9 @@ def license_gate(spdx: str, env: Mapping[str, str]) -> str | None:
         "Check that your use complies with the licence (see docs/LICENSING.md).",
     ]
     if accepted == spdx:
-        lines.append(f"Accepted via PERCEPTRA_ACCEPT_MODEL_LICENSE={spdx}.")
+        lines.append(f"Accepted via RTVISION_ACCEPT_MODEL_LICENSE={spdx}.")
     else:
-        lines.append(f"To start anyway, set PERCEPTRA_ACCEPT_MODEL_LICENSE={spdx}")
+        lines.append(f"To start anyway, set RTVISION_ACCEPT_MODEL_LICENSE={spdx}")
     width = max(len(x) for x in lines) + 4
     box = ["*" * width] + [f"* {x.ljust(width - 4)} *" for x in lines] + ["*" * width]
     print("\n".join(box), file=sys.stderr, flush=True)
@@ -122,19 +122,19 @@ def license_gate(spdx: str, env: Mapping[str, str]) -> str | None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="perceptra-run", description=__doc__.splitlines()[0])
+    ap = argparse.ArgumentParser(prog="rtvision-run", description=__doc__.splitlines()[0])
     ap.add_argument(
-        "--config", help=f"perceptra.yaml (env PERCEPTRA_CONFIG, default {DEFAULT_CONFIG})"
+        "--config", help=f"rtvision.yaml (env RTVISION_CONFIG, default {DEFAULT_CONFIG})"
     )
-    ap.add_argument("--model", help="model name under --models-dir, or path (env PERCEPTRA_MODEL)")
-    ap.add_argument("--models-dir", help=f"env PERCEPTRA_MODELS_DIR, default {DEFAULT_MODELS_DIR}")
-    ap.add_argument("--engine-dir", help=f"env PERCEPTRA_ENGINE_DIR, default {DEFAULT_ENGINE_DIR}")
+    ap.add_argument("--model", help="model name under --models-dir, or path (env RTVISION_MODEL)")
+    ap.add_argument("--models-dir", help=f"env RTVISION_MODELS_DIR, default {DEFAULT_MODELS_DIR}")
+    ap.add_argument("--engine-dir", help=f"env RTVISION_ENGINE_DIR, default {DEFAULT_ENGINE_DIR}")
     ap.add_argument(
         "--out-dir",
-        help=f"generated files (env PERCEPTRA_GENERATED_DIR, default {DEFAULT_OUT_DIR})",
+        help=f"generated files (env RTVISION_GENERATED_DIR, default {DEFAULT_OUT_DIR})",
     )
     ap.add_argument(
-        "--binary", help=f"perceptra binary (env PERCEPTRA_BINARY, default {DEFAULT_BINARY})"
+        "--binary", help=f"rtvision binary (env RTVISION_BINARY, default {DEFAULT_BINARY})"
     )
     ap.add_argument("--dry-run", action="store_true", help="validate and generate, do not exec")
     ap.add_argument(
@@ -142,7 +142,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="do not require ONNX/labels/DeepStream files to exist (outside the container)",
     )
-    ap.add_argument("--version", action="version", version=f"perceptra-run {__version__}")
+    ap.add_argument("--version", action="version", version=f"rtvision-run {__version__}")
     return ap
 
 
@@ -152,14 +152,14 @@ def main(argv: list[str] | None = None, env: Mapping[str, str] | None = None) ->
     check_files = not args.no_check_files
 
     try:
-        config_path = Path(pick(args.config, env, "PERCEPTRA_CONFIG", DEFAULT_CONFIG))  # type: ignore[arg-type]
-        model_arg = pick(args.model, env, "PERCEPTRA_MODEL", None)
+        config_path = Path(pick(args.config, env, "RTVISION_CONFIG", DEFAULT_CONFIG))  # type: ignore[arg-type]
+        model_arg = pick(args.model, env, "RTVISION_MODEL", None)
         if not model_arg:
-            raise ConfigError("no model selected: pass --model or set PERCEPTRA_MODEL")
-        models_dir = Path(pick(args.models_dir, env, "PERCEPTRA_MODELS_DIR", DEFAULT_MODELS_DIR))  # type: ignore[arg-type]
-        engine_dir = Path(pick(args.engine_dir, env, "PERCEPTRA_ENGINE_DIR", DEFAULT_ENGINE_DIR))  # type: ignore[arg-type]
-        out_dir = Path(pick(args.out_dir, env, "PERCEPTRA_GENERATED_DIR", DEFAULT_OUT_DIR))  # type: ignore[arg-type]
-        binary = pick(args.binary, env, "PERCEPTRA_BINARY", DEFAULT_BINARY)
+            raise ConfigError("no model selected: pass --model or set RTVISION_MODEL")
+        models_dir = Path(pick(args.models_dir, env, "RTVISION_MODELS_DIR", DEFAULT_MODELS_DIR))  # type: ignore[arg-type]
+        engine_dir = Path(pick(args.engine_dir, env, "RTVISION_ENGINE_DIR", DEFAULT_ENGINE_DIR))  # type: ignore[arg-type]
+        out_dir = Path(pick(args.out_dir, env, "RTVISION_GENERATED_DIR", DEFAULT_OUT_DIR))  # type: ignore[arg-type]
+        binary = pick(args.binary, env, "RTVISION_BINARY", DEFAULT_BINARY)
 
         service, overrides = load_service_config(config_path, env)
         for path in overrides:
@@ -226,12 +226,12 @@ def main(argv: list[str] | None = None, env: Mapping[str, str] | None = None) ->
                     f"event=engine_cache_copy file={name} dir={gen_configs.engine_cache_dir(ctx)}",
                 )
     except ConfigError as exc:
-        print(f"perceptra-run: configuration error: {exc}", file=sys.stderr, flush=True)
+        print(f"rtvision-run: configuration error: {exc}", file=sys.stderr, flush=True)
         return EXIT_CONFIG
 
     parser_ini = out_dir / "parser.ini"
     if parser_ini.exists():
-        os.environ["PERCEPTRA_PARSER_CONFIG"] = str(parser_ini)
+        os.environ["RTVISION_PARSER_CONFIG"] = str(parser_ini)
     cmd = [binary, "-c", str(out_dir / "ds-main.ini"), "-a", str(out_dir / "app.ini")]
     if not service["service"]["sources"]["force_tcp"]:
         cmd.append("--no-force-tcp")
@@ -242,7 +242,7 @@ def main(argv: list[str] | None = None, env: Mapping[str, str] | None = None) ->
     try:
         os.execv(cmd[0], cmd)  # noqa: S606 - replaces this process with the service binary
     except OSError as exc:
-        print(f"perceptra-run: cannot exec {cmd[0]}: {exc}", file=sys.stderr)
+        print(f"rtvision-run: cannot exec {cmd[0]}: {exc}", file=sys.stderr)
         return EXIT_CONFIG
     return 0  # not reached
 

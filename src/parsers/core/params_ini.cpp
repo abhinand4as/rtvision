@@ -12,7 +12,7 @@
 #include <fstream>
 #include <sstream>
 
-namespace perceptra {
+namespace rtvision {
 
 namespace {
 
@@ -174,4 +174,4 @@ bool load_parser_ini(const std::string &path, ParserConfig &out, std::string &er
     return parse_parser_ini(buf.str(), out, error);
 }
 
-} // namespace perceptra
+} // namespace rtvision

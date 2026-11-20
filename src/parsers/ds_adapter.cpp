@@ -6,9 +6,9 @@
 // ds_adapter.cpp - thin DeepStream nvinfer adapter over the pure C++ decoders in core/.
 //
 // Exports (custom bbox parse functions, see nvdsinfer_custom_impl.h):
-//   NvDsInferParsePerceptra_YoloE2E, _YoloRaw, _Detr, _EfficientNms
+//   NvDsInferParseRTVision_YoloE2E, _YoloRaw, _Detr, _EfficientNms
 // Family parameters come from parser.ini, read ONCE per process (std::call_once) from the path
-// in env PERCEPTRA_PARSER_CONFIG; nvinfer has no other channel for custom parser parameters.
+// in env RTVISION_PARSER_CONFIG; nvinfer has no other channel for custom parser parameters.
 // Without the env var, family defaults are used, layers are taken in output order and
 // num_classes comes from nvinfer's num-detected-classes.
 //
@@ -31,11 +31,11 @@
 #include "core/detection.hpp"
 #include "core/params_ini.hpp"
 
-#define PERCEPTRA_EXPORT extern "C" __attribute__((visibility("default")))
+#define RTVISION_EXPORT extern "C" __attribute__((visibility("default")))
 
 namespace {
 
-using namespace perceptra;
+using namespace rtvision;
 
 enum class Family { YOLO_E2E = 0, YOLO_RAW = 1, DETR = 2, EFFICIENT_NMS = 3 };
 constexpr int kNumFamilies = 4;
@@ -93,10 +93,10 @@ std::once_flag g_config_once;
 
 const LoadedConfig &config() {
     std::call_once(g_config_once, [] {
-        const char *path = std::getenv("PERCEPTRA_PARSER_CONFIG");
+        const char *path = std::getenv("RTVISION_PARSER_CONFIG");
         if (path == nullptr || *path == '\0') {
             log_line("warn", "-",
-                     "PERCEPTRA_PARSER_CONFIG not set: using family defaults, output layer order "
+                     "RTVISION_PARSER_CONFIG not set: using family defaults, output layer order "
                      "and nvinfer num-detected-classes");
             return;
         }
@@ -280,29 +280,29 @@ bool parse(Family fam, const std::vector<NvDsInferLayerInfo> &outputs,
 
 } // namespace
 
-#define PERCEPTRA_PARSE_ARGS                                                                       \
+#define RTVISION_PARSE_ARGS                                                                        \
     std::vector<NvDsInferLayerInfo> const &outputLayersInfo,                                       \
         NvDsInferNetworkInfo const &networkInfo,                                                   \
         NvDsInferParseDetectionParams const &detectionParams,                                      \
         std::vector<NvDsInferParseObjectInfo> &objectList
 
-PERCEPTRA_EXPORT bool NvDsInferParsePerceptra_YoloE2E(PERCEPTRA_PARSE_ARGS) {
+RTVISION_EXPORT bool NvDsInferParseRTVision_YoloE2E(RTVISION_PARSE_ARGS) {
     return parse(Family::YOLO_E2E, outputLayersInfo, networkInfo, detectionParams, objectList);
 }
 
-PERCEPTRA_EXPORT bool NvDsInferParsePerceptra_YoloRaw(PERCEPTRA_PARSE_ARGS) {
+RTVISION_EXPORT bool NvDsInferParseRTVision_YoloRaw(RTVISION_PARSE_ARGS) {
     return parse(Family::YOLO_RAW, outputLayersInfo, networkInfo, detectionParams, objectList);
 }
 
-PERCEPTRA_EXPORT bool NvDsInferParsePerceptra_Detr(PERCEPTRA_PARSE_ARGS) {
+RTVISION_EXPORT bool NvDsInferParseRTVision_Detr(RTVISION_PARSE_ARGS) {
     return parse(Family::DETR, outputLayersInfo, networkInfo, detectionParams, objectList);
 }
 
-PERCEPTRA_EXPORT bool NvDsInferParsePerceptra_EfficientNms(PERCEPTRA_PARSE_ARGS) {
+RTVISION_EXPORT bool NvDsInferParseRTVision_EfficientNms(RTVISION_PARSE_ARGS) {
     return parse(Family::EFFICIENT_NMS, outputLayersInfo, networkInfo, detectionParams, objectList);
 }
 
-CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParsePerceptra_YoloE2E);
-CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParsePerceptra_YoloRaw);
-CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParsePerceptra_Detr);
-CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParsePerceptra_EfficientNms);
+CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParseRTVision_YoloE2E);
+CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParseRTVision_YoloRaw);
+CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParseRTVision_Detr);
+CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParseRTVision_EfficientNms);

@@ -1,17 +1,17 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 Abhinand A S
-"""Third-party report: what the built Perceptra image actually contains, with licences.
+"""Third-party report: what the built RTVision image actually contains, with licences.
 
-    python3 tools/ci/third_party_report.py --image perceptra:local            # print Markdown
-    python3 tools/ci/third_party_report.py --image perceptra:local --write    # update the
+    python3 tools/ci/third_party_report.py --image rtvision:local            # print Markdown
+    python3 tools/ci/third_party_report.py --image rtvision:local --write    # update the
                                         # generated section of THIRD_PARTY_NOTICES.md
-    python3 tools/ci/third_party_report.py --image perceptra:local --check    # exit 1 on a
+    python3 tools/ci/third_party_report.py --image rtvision:local --check    # exit 1 on a
                                         # licence that needs the project owner's review
 
 Runs this same file inside the image (`--inner`, standard library only) to collect:
-  1. Python packages installed in /opt/perceptra/python (the perceptra-run tools);
+  1. Python packages installed in /opt/rtvision/python (the rtvision-run tools);
   2. apt packages the Dockerfile adds on top of the DeepStream base image (diff of dpkg lists);
-  3. shared libraries that the `perceptra` binary and libperceptra_parsers.so load (ldd),
+  3. shared libraries that the `rtvision` binary and librtvision_parsers.so load (ldd),
      grouped by owning Debian package, or marked NVIDIA when they come from /opt/nvidia or CUDA.
 Licences come from package metadata (Python) and /usr/share/doc/<pkg>/copyright (Debian).
 docs/LICENSING.md §6 is the intent; this report is the evidence.
@@ -32,8 +32,8 @@ NOTICES = REPO / "THIRD_PARTY_NOTICES.md"
 BEGIN = "<!-- BEGIN GENERATED: tools/ci/third_party_report.py -->"
 END = "<!-- END GENERATED -->"
 DEFAULT_BASE = "nvcr.io/nvidia/deepstream:9.1-samples-multiarch"
-BINARIES = ["/opt/perceptra/bin/perceptra", "/opt/perceptra/lib/libperceptra_parsers.so"]
-PY_TARGET = "/opt/perceptra/python"
+BINARIES = ["/opt/rtvision/bin/rtvision", "/opt/rtvision/lib/librtvision_parsers.so"]
+PY_TARGET = "/opt/rtvision/python"
 NVIDIA_PREFIXES = (
     "/opt/nvidia/",
     "/usr/local/cuda",
@@ -260,7 +260,7 @@ def render(image: str, base: str, data: dict, base_data: dict) -> tuple[str, lis
         f"## Generated report: contents of `{image}` (image `{_image_id(image)}`)",
         "",
         f"Base image `{base}`. Regenerate after any change to the Dockerfile or the Python "
-        "dependencies: `python3 tools/ci/third_party_report.py --image perceptra:local --write`.",
+        "dependencies: `python3 tools/ci/third_party_report.py --image rtvision:local --write`.",
         "",
         f"### Python packages in `{PY_TARGET}` ({len(data['python'])})",
         "",
@@ -302,7 +302,7 @@ def render(image: str, base: str, data: dict, base_data: dict) -> tuple[str, lis
             unowned.append(f"{e['lib']} ({e['path']})")
     lines += [
         "",
-        f"### Shared libraries loaded by `perceptra` and `libperceptra_parsers.so` ({len(data['libraries'])})",  # noqa: E501
+        f"### Shared libraries loaded by `rtvision` and `librtvision_parsers.so` ({len(data['libraries'])})",  # noqa: E501
         "",
         "Resolved with `ldd`. GStreamer plugins (including DeepStream's) are loaded at runtime "
         "from the base image and are not listed.",
@@ -348,7 +348,7 @@ def write_notices(section: str) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--image", default="perceptra:local")
+    ap.add_argument("--image", default="rtvision:local")
     ap.add_argument("--base-image", default=DEFAULT_BASE)
     ap.add_argument("--write", action="store_true", help=f"update {NOTICES.name}")
     ap.add_argument("--check", action="store_true", help="exit 1 if anything needs review")

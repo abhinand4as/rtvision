@@ -5,10 +5,10 @@
 Serves an H.264 MP4 (default: the DeepStream sample inside the container) at
 rtsp://<host>:<port>/sample (once per client connection). RTP sessions send RTCP sender reports with
 NTP time, so `timestamps.source: ntp` can be tested without a real camera. Run it inside the
-Perceptra/DeepStream image, e.g.::
+RTVision/DeepStream image, e.g.::
 
-    docker run --rm --name rtsp-src --network perceptra-test \\
-        -v $PWD/tests/integration:/it:ro --entrypoint python3 perceptra:local \\
+    docker run --rm --name rtsp-src --network rtvision-test \\
+        -v $PWD/tests/integration:/it:ro --entrypoint python3 rtvision:local \\
         /it/rtsp_test_server.py
 """
 

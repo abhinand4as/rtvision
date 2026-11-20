@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Instructions for the implementing agent (Claude Code)
 
-You are building **Perceptra**, a real-time multi-stream object-detection microservice, from the specification in this repository. Read these files **in this order** before writing code:
+You are building **RTVision**, a real-time multi-stream object-detection microservice, from the specification in this repository. Read these files **in this order** before writing code:
 
 1. `ARCHITECTURE.md` — what to build and why.
 2. `docs/IMPLEMENTATION_PLAN.md` — milestone order, file list, acceptance criteria.
@@ -18,7 +18,7 @@ You are building **Perceptra**, a real-time multi-stream object-detection micros
 5. **Probe code must never block** the streaming thread: no network I/O, no unbounded allocation, no `cudaDeviceSynchronize`, no logging per object at `info` level.
 6. **Ask the user before:** changing the repository licence; adding any dependency that is GPL/AGPL, or one whose licence is not listed in `docs/LICENSING.md`; adding a default model; publishing images to any registry.
 7. Prefer **small, reviewable commits**, one logical change each, with Conventional Commit messages (`feat:`, `fix:`, `docs:`, `test:`, `build:`, `chore:`).
-8. The project owner is **Abhinand A S** (provided 2026-11-20; it replaced the `<PROJECT_OWNER>` token). Keep **the project name** as a replaceable token until the user provides it. The default project name is `perceptra`, used in: the binary name, the Python package `perceptra_tools`, the metrics prefix `perceptra_`, the env prefix `PERCEPTRA_`, the image name and the schema id `perceptra.detection.v1`.
+8. The project owner is **Abhinand A S** (provided 2026-11-20; it replaced the `<PROJECT_OWNER>` token). The project name is **RTVision** (chosen by the owner on 2026-11-20, replacing the working name `perceptra`, see `docs/DEVIATIONS.md` #32). It is used in: the binary name, the Python package `rtvision_tools`, the metrics prefix `rtvision_`, the env prefix `RTVISION_`, the image name and the schema id `rtvision.detection.v1`.
 
 ## Sourcing RT-CV code (derived files)
 

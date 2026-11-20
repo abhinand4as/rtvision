@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 Abhinand A S
-"""JSON Schema validation helpers for ``perceptra.yaml`` and ``model.yaml``.
+"""JSON Schema validation helpers for ``rtvision.yaml`` and ``model.yaml``.
 
 * YAML is loaded with ``yaml.safe_load``.
-* ``PERCEPTRA__A__B=value`` environment variables override scalars in ``perceptra.yaml``
+* ``RTVISION__A__B=value`` environment variables override scalars in ``rtvision.yaml``
   (path segments lower-cased, ``__`` as separator, value parsed as a YAML scalar).
 * Validation uses JSON Schema 2020-12. Errors carry the field path, e.g.
   ``service.max_streams: 0 is less than the minimum of 1``; unknown keys are rejected.
@@ -24,7 +24,7 @@ from typing import Any
 import jsonschema
 import yaml
 
-ENV_OVERRIDE_PREFIX = "PERCEPTRA__"
+ENV_OVERRIDE_PREFIX = "RTVISION__"
 
 
 class ConfigError(Exception):
@@ -33,10 +33,10 @@ class ConfigError(Exception):
 
 def _schema_dir() -> Path:
     """schemas/ in the source tree, or the copy installed next to the package."""
-    env = os.environ.get("PERCEPTRA_SCHEMA_DIR")
+    env = os.environ.get("RTVISION_SCHEMA_DIR")
     if env:
         return Path(env)
-    packaged = resources.files("perceptra_tools") / "schemas"
+    packaged = resources.files("rtvision_tools") / "schemas"
     if packaged.is_dir():
         return Path(str(packaged))
     return Path(__file__).resolve().parents[2] / "schemas"
@@ -106,7 +106,7 @@ def apply_defaults(instance: Any, schema: Mapping[str, Any]) -> Any:
 
 
 def apply_env_overrides(data: dict[str, Any], env: Mapping[str, str]) -> list[str]:
-    """Applies PERCEPTRA__A__B=value overrides in place. Returns the applied paths (sorted)."""
+    """Applies RTVISION__A__B=value overrides in place. Returns the applied paths (sorted)."""
     applied = []
     for name in sorted(env):
         if not name.startswith(ENV_OVERRIDE_PREFIX):
@@ -136,7 +136,7 @@ def apply_env_overrides(data: dict[str, Any], env: Mapping[str, str]) -> list[st
 def load_service_config(
     path: Path, env: Mapping[str, str] | None = None
 ) -> tuple[dict[str, Any], list[str]]:
-    """Loads, overrides (env), validates and default-fills perceptra.yaml."""
+    """Loads, overrides (env), validates and default-fills rtvision.yaml."""
     data = load_yaml(path)
     if data is None:
         data = {}

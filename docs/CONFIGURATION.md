@@ -1,33 +1,33 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Configuration
 
-Perceptra is configured by two YAML files, both validated by JSON Schema at startup:
+RTVision is configured by two YAML files, both validated by JSON Schema at startup:
 
 | File | Scope | Schema |
 |---|---|---|
-| `perceptra.yaml` | service: streams, publishing, tracker, outputs, observability | `schemas/service_config.schema.json` |
+| `rtvision.yaml` | service: streams, publishing, tracker, outputs, observability | `schemas/service_config.schema.json` |
 | `model.yaml` | one detector: weights, I/O format, classes, thresholds, licence | `schemas/model.schema.json` |
 
-`perceptra-run` combines them and generates the DeepStream configs; users never edit DeepStream INI files directly.
+`rtvision-run` combines them and generates the DeepStream configs; users never edit DeepStream INI files directly.
 
 Selecting files (precedence: CLI flag > env var > default):
 
 | Purpose | CLI | Env | Default |
 |---|---|---|---|
-| service config | `--config` | `PERCEPTRA_CONFIG` | `/opt/perceptra/config/perceptra.yaml` |
-| model | `--model` | `PERCEPTRA_MODEL` (a name under the models dir, or a path) | — (required) |
-| models dir | `--models-dir` | `PERCEPTRA_MODELS_DIR` | `/opt/perceptra/models` |
-| engine cache | `--engine-dir` | `PERCEPTRA_ENGINE_DIR` | `/opt/perceptra/engines` |
+| service config | `--config` | `RTVISION_CONFIG` | `/opt/rtvision/config/rtvision.yaml` |
+| model | `--model` | `RTVISION_MODEL` (a name under the models dir, or a path) | — (required) |
+| models dir | `--models-dir` | `RTVISION_MODELS_DIR` | `/opt/rtvision/models` |
+| engine cache | `--engine-dir` | `RTVISION_ENGINE_DIR` | `/opt/rtvision/engines` |
 
-Any scalar in `perceptra.yaml` can be overridden by an env var with a `PERCEPTRA__` prefix and `__` as the path separator, e.g. `PERCEPTRA__PUBLISH__KAFKA__BROKERS=kafka:9092`.
+Any scalar in `rtvision.yaml` can be overridden by an env var with a `RTVISION__` prefix and `__` as the path separator, e.g. `RTVISION__PUBLISH__KAFKA__BROKERS=kafka:9092`.
 
 ---
 
-## `perceptra.yaml`
+## `rtvision.yaml`
 
 ```yaml
 service:
-  name: perceptra                 # appears in logs and metrics labels
+  name: rtvision                 # appears in logs and metrics labels
   gpu_id: 0
   max_streams: 4                  # batch size everywhere (streammux, nvinfer, source-list)
   http_ip: 0.0.0.0                # stream REST server bind address
@@ -72,17 +72,17 @@ publish:
     shutdown_flush_timeout_ms: 5000
   kafka:
     brokers: kafka:9092
-    topic: null                   # null = model.messaging.topic, else "perceptra.<model.name>"
+    topic: null                   # null = model.messaging.topic, else "rtvision.<model.name>"
     key: sensor_id                # sensor_id | none
     properties:                   # passthrough to librdkafka (e.g. security.protocol, sasl.*)
       linger.ms: "20"
       compression.type: lz4
   file:
-    path: /opt/perceptra/output/events.jsonl
+    path: /opt/rtvision/output/events.jsonl
 
 outputs:                          # optional visual outputs (debug)
   display: false                  # EGL tiled display + OSD (needs X)
-  file: null                      # e.g. /opt/perceptra/output/annotated.mp4
+  file: null                      # e.g. /opt/rtvision/output/annotated.mp4
   rtsp: null                      # e.g. { port: 8554, udp_port: 5400 }
 
 observability:
@@ -140,7 +140,7 @@ classes:
 precision: fp16                   # fp32 | fp16 | int8
 
 messaging:
-  topic: people-raw               # optional; default "perceptra.<name>"
+  topic: people-raw               # optional; default "rtvision.<name>"
 ```
 
 ### Escape hatch: existing nvinfer config (`family: builtin`)
@@ -162,19 +162,19 @@ Resize mapping: `letterbox_center` → `maintain-aspect-ratio=1, symmetric-paddi
 
 ### Model hot swap
 
-With `inference.hot_swap_file` set, `perceptra` watches that file (inotify on its directory, so editors, `mv` into place and Kubernetes ConfigMap updates all work). On change it applies the new model to the running nvinfer without stopping the pipeline:
+With `inference.hot_swap_file` set, `rtvision` watches that file (inotify on its directory, so editors, `mv` into place and Kubernetes ConfigMap updates all work). On change it applies the new model to the running nvinfer without stopping the pipeline:
 
 ```ini
 [primary-gie]
-model-engine-file=/opt/perceptra/engines/<model>-trt<ver>/<onnx>_b4_gpu0_fp16.engine
+model-engine-file=/opt/rtvision/engines/<model>-trt<ver>/<onnx>_b4_gpu0_fp16.engine
 # or: config-file=/path/to/another/pgie.ini
 ```
 
-The new engine must keep the task, output family, input size and batch size; anything else needs a restart. Results are logged (`comp=ota event=model_swapped result=ok|failed`) and counted in `perceptra_model_swaps_total{result}`.
+The new engine must keep the task, output family, input size and batch size; anything else needs a restart. Results are logged (`comp=ota event=model_swapped result=ok|failed`) and counted in `rtvision_model_swaps_total{result}`.
 
 ### Licence gate
 
-If `license.spdx` is not one of `Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause, CC0-1.0, CC-BY-4.0`, `perceptra-run` prints a warning box and exits with code 3 unless `PERCEPTRA_ACCEPT_MODEL_LICENSE` equals that SPDX id. The accepted id is logged and exported as the metric label `license`.
+If `license.spdx` is not one of `Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause, CC0-1.0, CC-BY-4.0`, `rtvision-run` prints a warning box and exits with code 3 unless `RTVISION_ACCEPT_MODEL_LICENSE` equals that SPDX id. The accepted id is logged and exported as the metric label `license`.
 
 ---
 
@@ -200,7 +200,7 @@ shutdown_flush_timeout_ms=5000
 kafka_brokers=kafka:9092
 kafka_topic=people-raw
 kafka_key=sensor_id
-kafka_properties_file=/tmp/perceptra/generated/kafka.properties
+kafka_properties_file=/tmp/rtvision/generated/kafka.properties
 file_path=
 
 [timestamps]

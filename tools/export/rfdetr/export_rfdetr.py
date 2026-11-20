@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 Abhinand A S
-"""Export a pretrained RF-DETR detector (Roboflow, Apache-2.0 sizes only) to ONNX for Perceptra.
+"""Export a pretrained RF-DETR detector (Roboflow, Apache-2.0 sizes only) to ONNX for RTVision.
 
 Runs in its own virtualenv with the `rfdetr` package (see export.sh / README.md); never imported
-by the service. The ONNX has a dynamic batch dimension (Perceptra batches up to
+by the service. The ONNX has a dynamic batch dimension (RTVision batches up to
 service.max_streams frames), input `input` [B,3,R,R] and outputs `dets` [B,300,4] (cxcywh,
 normalised) and `labels` [B,300,91] (logits, index = COCO category id) -> parser family `detr`.
 """

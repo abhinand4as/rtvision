@@ -12,31 +12,31 @@
 
 static const char *const backend_names[] = {"none", "kafka", "stdout", "file"};
 
-const char *perceptra_backend_kind_name(PerceptraBackendKind kind) {
+const char *rtvision_backend_kind_name(RTVisionBackendKind kind) {
     return (guint)kind < G_N_ELEMENTS(backend_names) ? backend_names[kind] : "?";
 }
 
-void perceptra_app_config_init(PerceptraAppConfig *cfg) {
+void rtvision_app_config_init(RTVisionAppConfig *cfg) {
     memset(cfg, 0, sizeof(*cfg));
-    cfg->service_name = g_strdup("perceptra");
+    cfg->service_name = g_strdup("rtvision");
     cfg->model_name = g_strdup("unknown");
     cfg->model_version = g_strdup("unknown");
     cfg->model_task = g_strdup("detect");
     cfg->model_family = g_strdup("unknown");
     cfg->model_license = g_strdup("unknown");
     cfg->model_precision = g_strdup("unknown");
-    cfg->publish.backend = PERCEPTRA_BACKEND_NONE;
+    cfg->publish.backend = RTVISION_BACKEND_NONE;
     cfg->publish.interval_frames = 30;
     cfg->publish.queue_max_events = 10000;
-    cfg->publish.on_full = PERCEPTRA_DROP_OLDEST;
+    cfg->publish.on_full = RTVISION_DROP_OLDEST;
     cfg->publish.shutdown_flush_timeout_ms = 5000;
     cfg->publish.kafka_key_sensor_id = TRUE;
-    cfg->timestamp_source = PERCEPTRA_TS_SYSTEM;
-    cfg->log_level = PERCEPTRA_LOG_INFO;
+    cfg->timestamp_source = RTVISION_TS_SYSTEM;
+    cfg->log_level = RTVISION_LOG_INFO;
     cfg->probe_log_every_n_frames = DEFAULT_PROBE_LOG_EVERY_N_FRAMES;
 }
 
-void perceptra_app_config_clear(PerceptraAppConfig *cfg) {
+void rtvision_app_config_clear(RTVisionAppConfig *cfg) {
     g_clear_pointer(&cfg->service_name, g_free);
     g_clear_pointer(&cfg->model_name, g_free);
     g_clear_pointer(&cfg->model_version, g_free);
@@ -129,10 +129,10 @@ static gboolean take_enum(GKeyFile *kf, const char *group, const char *key,
     return FALSE;
 }
 
-gboolean perceptra_app_config_load(const char *path, PerceptraAppConfig *cfg, GError **error) {
+gboolean rtvision_app_config_load(const char *path, RTVisionAppConfig *cfg, GError **error) {
     GKeyFile *kf = g_key_file_new();
     gboolean ok = FALSE;
-    PerceptraPublishConfig *p = &cfg->publish;
+    RTVisionPublishConfig *p = &cfg->publish;
 
     if (!g_key_file_load_from_file(kf, path, G_KEY_FILE_NONE, error))
         goto out;
@@ -164,7 +164,7 @@ gboolean perceptra_app_config_load(const char *path, PerceptraAppConfig *cfg, GE
     if (!take_enum(kf, "publish", "backend", backends, G_N_ELEMENTS(backends), &idx,
                    "kafka|stdout|file", error))
         goto out;
-    p->backend = (PerceptraBackendKind)idx;
+    p->backend = (RTVisionBackendKind)idx;
     if (!take_uint(kf, "publish", "interval_frames", 1, &p->interval_frames, error) ||
         !take_bool(kf, "publish", "include_empty_frames", &p->include_empty_frames, error) ||
         !take_bool(kf, "publish", "include_embeddings", &p->include_embeddings, error) ||
@@ -176,7 +176,7 @@ gboolean perceptra_app_config_load(const char *path, PerceptraAppConfig *cfg, GE
     idx = p->on_full;
     if (!take_enum(kf, "publish", "on_full", policies, 2, &idx, "drop_oldest|drop_newest", error))
         goto out;
-    p->on_full = (PerceptraDropPolicy)idx;
+    p->on_full = (RTVisionDropPolicy)idx;
     take_string(kf, "publish", "kafka_brokers", &p->kafka_brokers);
     take_string(kf, "publish", "kafka_topic", &p->kafka_topic);
     take_string(kf, "publish", "kafka_properties_file", &p->kafka_properties_file);
@@ -186,12 +186,12 @@ gboolean perceptra_app_config_load(const char *path, PerceptraAppConfig *cfg, GE
     if (!take_enum(kf, "publish", "kafka_key", keys, 2, &idx, "sensor_id|none", error))
         goto out;
     p->kafka_key_sensor_id = idx == 1;
-    if (p->backend == PERCEPTRA_BACKEND_KAFKA && (!p->kafka_brokers || !p->kafka_topic)) {
+    if (p->backend == RTVISION_BACKEND_KAFKA && (!p->kafka_brokers || !p->kafka_topic)) {
         g_set_error(error, G_KEY_FILE_ERROR, G_KEY_FILE_ERROR_INVALID_VALUE,
                     "[publish] backend=kafka needs kafka_brokers and kafka_topic");
         goto out;
     }
-    if (p->backend == PERCEPTRA_BACKEND_FILE && !p->file_path) {
+    if (p->backend == RTVISION_BACKEND_FILE && !p->file_path) {
         g_set_error(error, G_KEY_FILE_ERROR, G_KEY_FILE_ERROR_INVALID_VALUE,
                     "[publish] backend=file needs file_path");
         goto out;
@@ -199,7 +199,7 @@ gboolean perceptra_app_config_load(const char *path, PerceptraAppConfig *cfg, GE
 
     gchar *ts = g_key_file_get_string(kf, "timestamps", "source", NULL);
     if (ts) {
-        gboolean valid = perceptra_timestamp_source_parse(g_strstrip(ts), &cfg->timestamp_source);
+        gboolean valid = rtvision_timestamp_source_parse(g_strstrip(ts), &cfg->timestamp_source);
         if (!valid)
             invalid(error, "timestamps", "source", ts, "ntp|uri_utc|system");
         g_free(ts);
@@ -218,7 +218,7 @@ gboolean perceptra_app_config_load(const char *path, PerceptraAppConfig *cfg, GE
 
     gchar *level = g_key_file_get_string(kf, "ops", "log_level", NULL);
     if (level) {
-        gboolean valid = perceptra_log_parse_level(g_strstrip(level), &cfg->log_level);
+        gboolean valid = rtvision_log_parse_level(g_strstrip(level), &cfg->log_level);
         if (!valid)
             invalid(error, "ops", "log_level", level, "error|warn|info|debug");
         g_free(level);

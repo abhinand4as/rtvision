@@ -4,12 +4,12 @@
 
 The ONNX graph ignores the image content and outputs fixed detections [batch, K, 6]
 (x1, y1, x2, y2, score, class in 640x640 network pixels), so the whole path
-nvinfer -> libperceptra_parsers.so -> tracker -> probe can be exercised end to end.
+nvinfer -> librtvision_parsers.so -> tracker -> probe can be exercised end to end.
 The model, its labels and model.yaml are our own (Apache-2.0). Usage::
 
-    python3 tests/integration/make_synthetic_onnx.py /opt/perceptra/models/synthetic-e2e
+    python3 tests/integration/make_synthetic_onnx.py /opt/rtvision/models/synthetic-e2e
     python3 tests/integration/make_synthetic_onnx.py --variant b \\
-        /opt/perceptra/models/synthetic-e2e-b
+        /opt/rtvision/models/synthetic-e2e-b
 """
 
 from __future__ import annotations

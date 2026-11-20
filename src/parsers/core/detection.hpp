@@ -3,7 +3,7 @@
  * Copyright (c) 2026 Abhinand A S
  */
 
-// detection.hpp - core types and decoders of the Perceptra parser library (docs/PARSERS.md).
+// detection.hpp - core types and decoders of the RTVision parser library (docs/PARSERS.md).
 //
 // Pure C++17: no DeepStream, TensorRT or CUDA includes, so the decoders are unit-tested in CI
 // without a GPU and can be reused by a future open-source backend.
@@ -13,14 +13,14 @@
 //   1. drop NaN/Inf  2. drop class ids outside [0, num_classes)  3. allow-list
 //   4. per-class threshold (score >= threshold)  5. clamp to [0, net_w] x [0, net_h]
 //   6. drop boxes with width or height < 1 px  7. keep the top-k by score
-// Shape mismatches throw perceptra::ParseError; the DeepStream adapter catches every exception.
+// Shape mismatches throw rtvision::ParseError; the DeepStream adapter catches every exception.
 #pragma once
 
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-namespace perceptra {
+namespace rtvision {
 
 enum class BoxFormat { XYXY_PX, XYXY_NORM, CXCYWH_PX, CXCYWH_NORM };
 enum class Activation { NONE, SIGMOID, SOFTMAX };
@@ -91,4 +91,4 @@ bool parse_activation(const std::string &s, Activation &out);
 const char *to_string(BoxFormat f);
 const char *to_string(Activation a);
 
-} // namespace perceptra
+} // namespace rtvision

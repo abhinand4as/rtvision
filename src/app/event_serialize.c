@@ -3,14 +3,14 @@
  * Copyright (c) 2026 Abhinand A S
  */
 
-/* event_serialize.c - JSON serializer for perceptra.detection.v1 (see event_serialize.h). */
+/* event_serialize.c - JSON serializer for rtvision.detection.v1 (see event_serialize.h). */
 #include "event_serialize.h"
 
 #include <math.h>
 #include <string.h>
 #include <time.h>
 
-void perceptra_format_rfc3339_ms(gint64 unix_ms, char *buf, gsize len) {
+void rtvision_format_rfc3339_ms(gint64 unix_ms, char *buf, gsize len) {
     gint64 secs = unix_ms / 1000;
     gint64 ms = unix_ms % 1000;
     if (ms < 0) {
@@ -25,7 +25,7 @@ void perceptra_format_rfc3339_ms(gint64 unix_ms, char *buf, gsize len) {
                (int)ms);
 }
 
-void perceptra_json_append_string(GString *out, const char *s) {
+void rtvision_json_append_string(GString *out, const char *s) {
     if (s == NULL) {
         g_string_append(out, "null");
         return;
@@ -93,7 +93,7 @@ static void append_key(GString *out, const char *key) {
     g_string_append(out, "\":");
 }
 
-static void append_object(GString *out, const PerceptraObject *o) {
+static void append_object(GString *out, const RTVisionObject *o) {
     g_string_append_c(out, '{');
     append_key(out, "track_id");
     if (o->has_track_id)
@@ -105,7 +105,7 @@ static void append_object(GString *out, const PerceptraObject *o) {
     g_string_append_printf(out, "%d", MAX(o->class_id, 0));
     g_string_append_c(out, ',');
     append_key(out, "label");
-    perceptra_json_append_string(out, o->label ? o->label : "");
+    rtvision_json_append_string(out, o->label ? o->label : "");
     g_string_append_c(out, ',');
     append_key(out, "confidence");
     if (o->has_confidence && isfinite(o->confidence))
@@ -145,35 +145,35 @@ static void append_object(GString *out, const PerceptraObject *o) {
     g_string_append_c(out, '}');
 }
 
-void perceptra_event_to_json(const PerceptraFrameEvent *ev, const PerceptraEventContext *ctx,
-                             GString *out) {
+void rtvision_event_to_json(const RTVisionFrameEvent *ev, const RTVisionEventContext *ctx,
+                            GString *out) {
     char ts[32];
     g_string_truncate(out, 0);
     g_string_append_c(out, '{');
     append_key(out, "schema");
-    perceptra_json_append_string(out, PERCEPTRA_SCHEMA_ID);
+    rtvision_json_append_string(out, RTVISION_SCHEMA_ID);
     g_string_append_c(out, ',');
     append_key(out, "event_id");
-    perceptra_json_append_string(out, ev->event_id);
+    rtvision_json_append_string(out, ev->event_id);
     g_string_append_c(out, ',');
     append_key(out, "service");
-    perceptra_json_append_string(out, ctx->service);
+    rtvision_json_append_string(out, ctx->service);
     g_string_append_c(out, ',');
     append_key(out, "timestamp");
-    perceptra_format_rfc3339_ms(ev->timestamp_ms, ts, sizeof(ts));
-    perceptra_json_append_string(out, ts);
+    rtvision_format_rfc3339_ms(ev->timestamp_ms, ts, sizeof(ts));
+    rtvision_json_append_string(out, ts);
     g_string_append_c(out, ',');
     append_key(out, "timestamp_source");
-    perceptra_json_append_string(out, perceptra_timestamp_source_name(ev->timestamp_source));
+    rtvision_json_append_string(out, rtvision_timestamp_source_name(ev->timestamp_source));
     g_string_append_c(out, ',');
 
     append_key(out, "sensor");
     g_string_append_c(out, '{');
     append_key(out, "id");
-    perceptra_json_append_string(out, ev->sensor_id ? ev->sensor_id : "unknown");
+    rtvision_json_append_string(out, ev->sensor_id ? ev->sensor_id : "unknown");
     g_string_append_c(out, ',');
     append_key(out, "name");
-    perceptra_json_append_string(out, ev->sensor_name); /* NULL -> null */
+    rtvision_json_append_string(out, ev->sensor_name); /* NULL -> null */
     g_string_append_c(out, ',');
     append_key(out, "stream_index");
     g_string_append_printf(out, "%u", ev->stream_index);
@@ -186,13 +186,13 @@ void perceptra_event_to_json(const PerceptraFrameEvent *ev, const PerceptraEvent
     append_key(out, "model");
     g_string_append_c(out, '{');
     append_key(out, "name");
-    perceptra_json_append_string(out, ctx->model_name);
+    rtvision_json_append_string(out, ctx->model_name);
     g_string_append_c(out, ',');
     append_key(out, "version");
-    perceptra_json_append_string(out, ctx->model_version);
+    rtvision_json_append_string(out, ctx->model_version);
     g_string_append_c(out, ',');
     append_key(out, "task");
-    perceptra_json_append_string(out, ctx->model_task);
+    rtvision_json_append_string(out, ctx->model_task);
     g_string_append(out, "},");
 
     append_key(out, "objects");

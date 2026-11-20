@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 Abhinand A S
-"""Summarise tracker stability from Perceptra events (JSON Lines on stdin or a file).
+"""Summarise tracker stability from RTVision events (JSON Lines on stdin or a file).
 
 Per stream (sensor.id), events are taken in frame order. Reported:
   * persistence: mean fraction of track ids of event i that are present again in event i+1
@@ -8,7 +8,7 @@ Per stream (sensor.id), events are taken in frame order. Reported:
   * untracked: objects with track_id null
 Exit 1 if persistence < --min-persistence or median lifetime < --min-lifetime.
 
-    docker logs perceptra 2>/dev/null | python3 tests/integration/track_stability.py
+    docker logs rtvision 2>/dev/null | python3 tests/integration/track_stability.py
 """
 
 from __future__ import annotations

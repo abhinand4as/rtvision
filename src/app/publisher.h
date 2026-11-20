@@ -5,13 +5,13 @@
 
 /* publisher.h - bounded event queue + worker thread + backend vtable.
  *
- * The probe calls perceptra_publisher_enqueue() on the streaming thread: it never blocks beyond
+ * The probe calls rtvision_publisher_enqueue() on the streaming thread: it never blocks beyond
  * a short mutex section and never does I/O. When the queue is full the configured policy applies
  * (drop_oldest by default) and the dropped counter is incremented. The worker thread serializes
  * events (event_serialize.c) and hands the bytes to the backend (kafka | stdout | file).
  */
-#ifndef PERCEPTRA_PUBLISHER_H
-#define PERCEPTRA_PUBLISHER_H
+#ifndef RTVISION_PUBLISHER_H
+#define RTVISION_PUBLISHER_H
 
 #include <glib.h>
 
@@ -19,30 +19,30 @@
 
 G_BEGIN_DECLS
 
-typedef struct PerceptraPublisher PerceptraPublisher;
-typedef struct PerceptraBackend PerceptraBackend;
+typedef struct RTVisionPublisher RTVisionPublisher;
+typedef struct RTVisionBackend RTVisionBackend;
 
 typedef struct {
     const char *name;
-    /* TRUE: send() only queues; the backend later calls perceptra_publisher_report_delivery(). */
+    /* TRUE: send() only queues; the backend later calls rtvision_publisher_report_delivery(). */
     gboolean async_delivery;
     /* Hands one serialized event to the backend (worker thread). key may be NULL. */
-    gboolean (*send)(PerceptraBackend *b, const char *key, const char *data, gsize len,
+    gboolean (*send)(RTVisionBackend *b, const char *key, const char *data, gsize len,
                      GError **error);
     /* Optional: called by the worker regularly (callbacks, health checks). */
-    void (*poll)(PerceptraBackend *b);
+    void (*poll)(RTVisionBackend *b);
     /* Waits until everything sent has been delivered or timeout_ms elapsed. */
-    gboolean (*flush)(PerceptraBackend *b, gint timeout_ms);
-    gboolean (*healthy)(PerceptraBackend *b);
-    void (*destroy)(PerceptraBackend *b);
-} PerceptraBackendOps;
+    gboolean (*flush)(RTVisionBackend *b, gint timeout_ms);
+    gboolean (*healthy)(RTVisionBackend *b);
+    void (*destroy)(RTVisionBackend *b);
+} RTVisionBackendOps;
 
-struct PerceptraBackend {
-    const PerceptraBackendOps *ops;
-    PerceptraPublisher *publisher; /* set by perceptra_publisher_new() */
+struct RTVisionBackend {
+    const RTVisionBackendOps *ops;
+    RTVisionPublisher *publisher; /* set by rtvision_publisher_new() */
 };
 
-typedef enum { PERCEPTRA_DROP_OLDEST, PERCEPTRA_DROP_NEWEST } PerceptraDropPolicy;
+typedef enum { RTVISION_DROP_OLDEST, RTVISION_DROP_NEWEST } RTVisionDropPolicy;
 
 typedef struct {
     guint64 enqueued;  /* accepted into the queue */
@@ -51,38 +51,38 @@ typedef struct {
     guint64 failed;    /* backend errors */
     guint depth;       /* current queue length */
     gboolean healthy;  /* backend health (Kafka connected) */
-} PerceptraPublisherStats;
+} RTVisionPublisherStats;
 
 /* Takes ownership of `backend`. key_by_sensor: use sensor.id as the message key. */
-PerceptraPublisher *perceptra_publisher_new(PerceptraBackend *backend,
-                                            const PerceptraEventContext *ctx, guint max_events,
-                                            PerceptraDropPolicy policy, gboolean key_by_sensor);
+RTVisionPublisher *rtvision_publisher_new(RTVisionBackend *backend, const RTVisionEventContext *ctx,
+                                          guint max_events, RTVisionDropPolicy policy,
+                                          gboolean key_by_sensor);
 
 /* Takes ownership of `ev` (freed on drop). Returns FALSE if the event was dropped. */
-gboolean perceptra_publisher_enqueue(PerceptraPublisher *pub, PerceptraFrameEvent *ev);
+gboolean rtvision_publisher_enqueue(RTVisionPublisher *pub, RTVisionFrameEvent *ev);
 
 /* For async backends: one delivery result. Thread-safe. */
-void perceptra_publisher_report_delivery(PerceptraPublisher *pub, gboolean ok);
+void rtvision_publisher_report_delivery(RTVisionPublisher *pub, gboolean ok);
 
 /* Stops accepting events, drains the queue and flushes the backend within timeout_ms, joins the
  * worker. Events still queued at the deadline are counted as dropped. Returns TRUE if everything
  * was delivered. Idempotent. */
-gboolean perceptra_publisher_shutdown(PerceptraPublisher *pub, guint timeout_ms);
+gboolean rtvision_publisher_shutdown(RTVisionPublisher *pub, guint timeout_ms);
 
-void perceptra_publisher_free(PerceptraPublisher *pub); /* calls shutdown(0) if needed */
+void rtvision_publisher_free(RTVisionPublisher *pub); /* calls shutdown(0) if needed */
 
-void perceptra_publisher_get_stats(PerceptraPublisher *pub, PerceptraPublisherStats *out);
+void rtvision_publisher_get_stats(RTVisionPublisher *pub, RTVisionPublisherStats *out);
 
 /* Backends (publisher_stream.c, publisher_kafka.c). */
 /* JSON Lines on a file descriptor that the backend takes ownership of (e.g. a dup of stdout). */
-PerceptraBackend *perceptra_backend_stream_new_fd(int fd, GError **error);
+RTVisionBackend *rtvision_backend_stream_new_fd(int fd, GError **error);
 /* JSON Lines appended to `path` (parent directories created). */
-PerceptraBackend *perceptra_backend_file_new(const char *path, GError **error);
+RTVisionBackend *rtvision_backend_file_new(const char *path, GError **error);
 /* librdkafka producer. properties_file: librdkafka key=value lines (may be NULL/empty). */
-PerceptraBackend *perceptra_backend_kafka_new(const char *brokers, const char *topic,
-                                              const char *properties_file, const char *client_id,
-                                              GError **error);
+RTVisionBackend *rtvision_backend_kafka_new(const char *brokers, const char *topic,
+                                            const char *properties_file, const char *client_id,
+                                            GError **error);
 
 G_END_DECLS
 
-#endif /* PERCEPTRA_PUBLISHER_H */
+#endif /* RTVISION_PUBLISHER_H */

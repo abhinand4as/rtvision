@@ -9,7 +9,7 @@ It reads `../rfdetr-s-coco/rfdetr-small.onnx` and `../rfdetr-s-coco/labels.txt`,
 
 ```bash
 tools/export/rfdetr/export.sh
-PERCEPTRA_MODEL=rfdetr-s-people docker compose -f deploy/compose/compose.yaml up -d
+RTVISION_MODEL=rfdetr-s-people docker compose -f deploy/compose/compose.yaml up -d
 ```
 
 The engine cache is per model name, so this model builds its own engine on first start.

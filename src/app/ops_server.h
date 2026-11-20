@@ -12,8 +12,8 @@
  * Non-200 health answers are 503 {"status":"<reason>"}. Runs on its own thread and GMainContext,
  * independent of DeepStream's REST server. Unauthenticated: bind to trusted networks.
  */
-#ifndef PERCEPTRA_OPS_SERVER_H
-#define PERCEPTRA_OPS_SERVER_H
+#ifndef RTVISION_OPS_SERVER_H
+#define RTVISION_OPS_SERVER_H
 
 #include <glib.h>
 
@@ -22,17 +22,17 @@
 
 G_BEGIN_DECLS
 
-#define PERCEPTRA_LIVE_MAX_AGE_S 10
+#define RTVISION_LIVE_MAX_AGE_S 10
 
-/* cfg and publisher must stay valid until perceptra_ops_stop(). */
-gboolean perceptra_ops_start(guint port, const PerceptraAppConfig *cfg,
-                             PerceptraPublisher *publisher, const char *version, GError **error);
-void perceptra_ops_stop(void);
+/* cfg and publisher must stay valid until rtvision_ops_stop(). */
+gboolean rtvision_ops_start(guint port, const RTVisionAppConfig *cfg, RTVisionPublisher *publisher,
+                            const char *version, GError **error);
+void rtvision_ops_stop(void);
 
-void perceptra_ops_set_started(void);             /* /startup -> 200 (sticky) */
-void perceptra_ops_set_playing(gboolean playing); /* /ready gate */
-void perceptra_ops_heartbeat(void);               /* /live: call from the main loop */
+void rtvision_ops_set_started(void);             /* /startup -> 200 (sticky) */
+void rtvision_ops_set_playing(gboolean playing); /* /ready gate */
+void rtvision_ops_heartbeat(void);               /* /live: call from the main loop */
 
 G_END_DECLS
 
-#endif /* PERCEPTRA_OPS_SERVER_H */
+#endif /* RTVISION_OPS_SERVER_H */

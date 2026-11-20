@@ -4,8 +4,8 @@
 
 No inference is run and external weight data is not loaded. Usage::
 
-    python -m perceptra_tools.onnx_inspect model.onnx
-    python -m perceptra_tools.onnx_inspect model.onnx --family detr --num-classes 80 \\
+    python -m rtvision_tools.onnx_inspect model.onnx
+    python -m rtvision_tools.onnx_inspect model.onnx --family detr --num-classes 80 \\
         --layers boxes,scores --max-streams 4
 
 Shapes are reported as written in the graph; symbolic dims (e.g. ``batch``) are kept as names.

@@ -15,35 +15,35 @@
 
 #define LOG_LINE_MAX 2048
 
-static gint g_level = PERCEPTRA_LOG_INFO;
+static gint g_level = RTVISION_LOG_INFO;
 
 static const char *const level_names[] = {"error", "warn", "info", "debug"};
 
-void perceptra_log_set_level(PerceptraLogLevel level) {
+void rtvision_log_set_level(RTVisionLogLevel level) {
     g_atomic_int_set(&g_level, (gint)level);
 }
 
-PerceptraLogLevel perceptra_log_get_level(void) {
-    return (PerceptraLogLevel)g_atomic_int_get(&g_level);
+RTVisionLogLevel rtvision_log_get_level(void) {
+    return (RTVisionLogLevel)g_atomic_int_get(&g_level);
 }
 
-gboolean perceptra_log_parse_level(const char *text, PerceptraLogLevel *out) {
+gboolean rtvision_log_parse_level(const char *text, RTVisionLogLevel *out) {
     if (text == NULL)
         return FALSE;
     for (guint i = 0; i < G_N_ELEMENTS(level_names); i++) {
         if (g_ascii_strcasecmp(text, level_names[i]) == 0) {
-            *out = (PerceptraLogLevel)i;
+            *out = (RTVisionLogLevel)i;
             return TRUE;
         }
     }
     if (g_ascii_strcasecmp(text, "warning") == 0) {
-        *out = PERCEPTRA_LOG_WARN;
+        *out = RTVISION_LOG_WARN;
         return TRUE;
     }
     return FALSE;
 }
 
-void perceptra_log(PerceptraLogLevel level, const char *component, const char *fmt, ...) {
+void rtvision_log(RTVisionLogLevel level, const char *component, const char *fmt, ...) {
     char line[LOG_LINE_MAX];
     struct timeval tv;
     struct tm tm_utc;
@@ -51,7 +51,7 @@ void perceptra_log(PerceptraLogLevel level, const char *component, const char *f
     gmtime_r(&tv.tv_sec, &tm_utc);
 
     if ((guint)level >= G_N_ELEMENTS(level_names))
-        level = PERCEPTRA_LOG_DEBUG;
+        level = RTVISION_LOG_DEBUG;
 
     int n = snprintf(
         line, sizeof(line), "ts=%04d-%02d-%02dT%02d:%02d:%02d.%03ldZ level=%s comp=%s ",

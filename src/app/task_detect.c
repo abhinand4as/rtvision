@@ -3,7 +3,7 @@
  * Copyright (c) 2026 Abhinand A S
  */
 
-/* task_detect.c - detect task handler: NvDsObjectMeta -> PerceptraObject.
+/* task_detect.c - detect task handler: NvDsObjectMeta -> RTVisionObject.
  *
  * - bbox: rect_params are in streammux (pipeline) resolution; rescaled to the source resolution
  *   (frame_meta->source_frame_width/height). nvstreammux runs with enable-padding=0, so each
@@ -23,7 +23,7 @@ static gboolean detect_init(GError **error) {
     return TRUE;
 }
 
-static guint detect_fill(AppCtx *app_ctx, NvDsFrameMeta *fm, PerceptraFrameEvent *ev) {
+static guint detect_fill(AppCtx *app_ctx, NvDsFrameMeta *fm, RTVisionFrameEvent *ev) {
     (void)app_ctx;
     guint overflow = 0;
     const double pw = fm->pipeline_width ? fm->pipeline_width : fm->source_frame_width;
@@ -39,7 +39,7 @@ static guint detect_fill(AppCtx *app_ctx, NvDsFrameMeta *fm, PerceptraFrameEvent
             overflow++;
             continue;
         }
-        PerceptraObject *o = &ev->objects[ev->num_objects++];
+        RTVisionObject *o = &ev->objects[ev->num_objects++];
         o->has_track_id = om->object_id != UNTRACKED_OBJECT_ID;
         o->track_id = om->object_id;
         o->class_id = om->class_id;
@@ -50,12 +50,12 @@ static guint detect_fill(AppCtx *app_ctx, NvDsFrameMeta *fm, PerceptraFrameEvent
         o->top = om->rect_params.top * sy;
         o->width = om->rect_params.width * sx;
         o->height = om->rect_params.height * sy;
-        o->embedding = perceptra_embeddings_for_object(fm, om); /* NULL unless enabled */
+        o->embedding = rtvision_embeddings_for_object(fm, om); /* NULL unless enabled */
     }
     return overflow;
 }
 
 static void detect_shutdown(void) {}
 
-const PerceptraTaskHandler perceptra_task_detect = {"detect", detect_init, detect_fill,
-                                                    detect_shutdown};
+const RTVisionTaskHandler rtvision_task_detect = {"detect", detect_init, detect_fill,
+                                                  detect_shutdown};

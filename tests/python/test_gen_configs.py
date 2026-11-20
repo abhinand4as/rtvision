@@ -3,7 +3,7 @@
 """gen_configs: golden files for the example models and the mapping rules.
 
 Regenerate golden files after an intended change with:
-    PERCEPTRA_UPDATE_GOLDEN=1 pytest -q tests/python/test_gen_configs.py
+    RTVISION_UPDATE_GOLDEN=1 pytest -q tests/python/test_gen_configs.py
 """
 
 from __future__ import annotations
@@ -15,11 +15,11 @@ from pathlib import Path
 import pytest
 import yaml
 from conftest import EXAMPLE_CONFIG, EXAMPLES, FIXTURE_MODELS, GOLDEN, REPO, write_model
-from perceptra_tools import gen_configs
-from perceptra_tools.schemas import ConfigError, load_model_config, load_service_config
+from rtvision_tools import gen_configs
+from rtvision_tools.schemas import ConfigError, load_model_config, load_service_config
 
-OUT_DIR = Path("/tmp/perceptra/generated")
-ENGINE_DIR = Path("/opt/perceptra/engines")
+OUT_DIR = Path("/tmp/rtvision/generated")
+ENGINE_DIR = Path("/opt/rtvision/engines")
 TRT = "10.16.1"
 
 
@@ -52,7 +52,7 @@ def test_golden(model: str) -> None:
     gdir = GOLDEN / "generated" / model
     # Golden files must not depend on where the repo is checked out.
     files = {k: v.replace(str(REPO), "<REPO>") for k, v in files.items()}
-    if os.environ.get("PERCEPTRA_UPDATE_GOLDEN") == "1":
+    if os.environ.get("RTVISION_UPDATE_GOLDEN") == "1":
         gdir.mkdir(parents=True, exist_ok=True)
         for old in gdir.iterdir():
             old.unlink()
@@ -66,7 +66,7 @@ def test_golden(model: str) -> None:
 
 @pytest.mark.parametrize("n", [1, 3, 16])
 def test_max_streams_propagates_to_every_batch_key(n: int) -> None:
-    ctx = ctx_for(EXAMPLES / "rtdetr-r18-coco", env={"PERCEPTRA__SERVICE__MAX_STREAMS": str(n)})
+    ctx = ctx_for(EXAMPLES / "rtdetr-r18-coco", env={"RTVISION__SERVICE__MAX_STREAMS": str(n)})
     files = gen_configs.generate(ctx)
     ds, pg = ini(files["ds-main.ini"]), ini(files["pgie.ini"])
     assert ds["source-list"]["max-batch-size"] == str(n)
@@ -79,7 +79,7 @@ def test_max_streams_propagates_to_every_batch_key(n: int) -> None:
 def test_builtin_overrides_batch_and_gpu_only() -> None:
     ctx = ctx_for(
         EXAMPLES / "trafficcamnet-sample",
-        env={"PERCEPTRA__SERVICE__MAX_STREAMS": "6", "PERCEPTRA__SERVICE__GPU_ID": "1"},
+        env={"RTVISION__SERVICE__MAX_STREAMS": "6", "RTVISION__SERVICE__GPU_ID": "1"},
     )
     files = gen_configs.generate(ctx)
     assert "pgie.ini" not in files and "parser.ini" not in files
@@ -134,7 +134,7 @@ def test_precision_override_and_cluster_mode(tmp_path: Path) -> None:
     p = write_model(
         tmp_path, src, (FIXTURE_MODELS / "yolo26s-people" / "labels.txt").read_text().splitlines()
     )
-    files = gen_configs.generate(ctx_for(p.parent, env={"PERCEPTRA__INFERENCE__PRECISION": "fp32"}))
+    files = gen_configs.generate(ctx_for(p.parent, env={"RTVISION__INFERENCE__PRECISION": "fp32"}))
     pg = ini(files["pgie.ini"])
     assert pg["property"]["network-mode"] == "0"
     assert pg["property"]["model-engine-file"].endswith("_fp32.engine")
@@ -146,16 +146,16 @@ def test_precision_override_and_cluster_mode(tmp_path: Path) -> None:
 def test_tracker_profiles_and_reid() -> None:
     for profile, fname in gen_configs.TRACKER_PROFILES.items():
         files = gen_configs.generate(
-            ctx_for(EXAMPLES / "rtdetr-r18-coco", env={"PERCEPTRA__TRACKER__PROFILE": profile})
+            ctx_for(EXAMPLES / "rtdetr-r18-coco", env={"RTVISION__TRACKER__PROFILE": profile})
         )
         assert ini(files["ds-main.ini"])["tracker"]["ll-config-file"].endswith(fname)
     files = gen_configs.generate(
-        ctx_for(EXAMPLES / "rtdetr-r18-coco", env={"PERCEPTRA__TRACKER__PROFILE": "none"})
+        ctx_for(EXAMPLES / "rtdetr-r18-coco", env={"RTVISION__TRACKER__PROFILE": "none"})
     )
     assert ini(files["ds-main.ini"])["tracker"]["enable"] == "0"
     with pytest.raises(ConfigError, match="tracker.reid"):
         gen_configs.generate(
-            ctx_for(EXAMPLES / "rtdetr-r18-coco", env={"PERCEPTRA__TRACKER__REID": "true"})
+            ctx_for(EXAMPLES / "rtdetr-r18-coco", env={"RTVISION__TRACKER__REID": "true"})
         )
 
 
@@ -171,14 +171,14 @@ def test_force_tcp_and_outputs() -> None:
         ctx_for(
             EXAMPLES / "rtdetr-r18-coco",
             env={
-                "PERCEPTRA__SERVICE__SOURCES__FORCE_TCP": "false",
-                "PERCEPTRA__OUTPUTS__FILE": "/opt/perceptra/output/a.mp4",
+                "RTVISION__SERVICE__SOURCES__FORCE_TCP": "false",
+                "RTVISION__OUTPUTS__FILE": "/opt/rtvision/output/a.mp4",
             },
         )
     )
     ds = ini(files["ds-main.ini"])
     assert "select-rtp-protocol" not in ds["source-attr-all"]
-    assert ds["sink2"]["output-file"] == "/opt/perceptra/output/a.mp4"
+    assert ds["sink2"]["output-file"] == "/opt/rtvision/output/a.mp4"
     assert ds["tiled-display"]["enable"] == "1" and ds["osd"]["enable"] == "1"
 
 
@@ -211,7 +211,7 @@ def test_unsupported_task(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     ("env", "expected"),
-    [({"PERCEPTRA__PUBLISH__KAFKA__TOPIC": "custom"}, "custom"), ({}, "perceptra.rtdetr-r18-coco")],
+    [({"RTVISION__PUBLISH__KAFKA__TOPIC": "custom"}, "custom"), ({}, "rtvision.rtdetr-r18-coco")],
 )
 def test_kafka_topic_resolution(env: dict, expected: str) -> None:
     files = gen_configs.generate(ctx_for(EXAMPLES / "rtdetr-r18-coco", env=env))
@@ -220,7 +220,7 @@ def test_kafka_topic_resolution(env: dict, expected: str) -> None:
 
 def test_stdout_backend_has_no_kafka_files() -> None:
     files = gen_configs.generate(
-        ctx_for(EXAMPLES / "rtdetr-r18-coco", env={"PERCEPTRA__PUBLISH__BACKEND": "stdout"})
+        ctx_for(EXAMPLES / "rtdetr-r18-coco", env={"RTVISION__PUBLISH__BACKEND": "stdout"})
     )
     assert "kafka.properties" not in files
     pub = ini(files["app.ini"])["publish"]
@@ -326,7 +326,7 @@ def _fake_ds_root(tmp_path: Path, with_model: bool) -> Path:
 def test_timestamps_source_sets_attach_sys_ts() -> None:
     for source, expected in (("ntp", "0"), ("uri_utc", "1"), ("system", "1")):
         files = gen_configs.generate(
-            ctx_for(EXAMPLES / "rtdetr-r18-coco", env={"PERCEPTRA__TIMESTAMPS__SOURCE": source})
+            ctx_for(EXAMPLES / "rtdetr-r18-coco", env={"RTVISION__TIMESTAMPS__SOURCE": source})
         )
         assert ini(files["ds-main.ini"])["streammux"]["attach-sys-ts-as-ntp"] == expected
         assert ini(files["app.ini"])["timestamps"]["source"] == source
@@ -334,10 +334,10 @@ def test_timestamps_source_sets_attach_sys_ts() -> None:
 
 def test_reid_tracker_config_generated(tmp_path: Path) -> None:
     env = {
-        "PERCEPTRA__TRACKER__PROFILE": "nvdcf_accuracy",
-        "PERCEPTRA__TRACKER__REID": "true",
-        "PERCEPTRA__TRACKER__REID_STORE_AGE": "30",
-        "PERCEPTRA__PUBLISH__INCLUDE_EMBEDDINGS": "true",
+        "RTVISION__TRACKER__PROFILE": "nvdcf_accuracy",
+        "RTVISION__TRACKER__REID": "true",
+        "RTVISION__TRACKER__REID_STORE_AGE": "30",
+        "RTVISION__PUBLISH__INCLUDE_EMBEDDINGS": "true",
     }
     ctx = ctx_for(EXAMPLES / "rtdetr-r18-coco", env=env, check_files=False)
     ctx.ds_root = str(_fake_ds_root(tmp_path, with_model=True))
@@ -358,7 +358,7 @@ def test_reid_tracker_config_generated(tmp_path: Path) -> None:
 
 
 def test_accuracy_profile_without_reid_model(tmp_path: Path) -> None:
-    env = {"PERCEPTRA__TRACKER__PROFILE": "nvdcf_accuracy"}
+    env = {"RTVISION__TRACKER__PROFILE": "nvdcf_accuracy"}
     ctx = ctx_for(EXAMPLES / "rtdetr-r18-coco", env=env, check_files=True)
     ctx.ds_root = str(_fake_ds_root(tmp_path, with_model=False))
     with pytest.raises(ConfigError, match="needs the ReID model .*not shipped"):
@@ -376,6 +376,6 @@ def test_embeddings_require_reid() -> None:
     with pytest.raises(ConfigError, match="include_embeddings: true requires tracker.reid"):
         gen_configs.generate(
             ctx_for(
-                EXAMPLES / "rtdetr-r18-coco", env={"PERCEPTRA__PUBLISH__INCLUDE_EMBEDDINGS": "true"}
+                EXAMPLES / "rtdetr-r18-coco", env={"RTVISION__PUBLISH__INCLUDE_EMBEDDINGS": "true"}
             )
         )

@@ -1,11 +1,11 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Parser library contract (`libperceptra_parsers.so`)
+# Parser library contract (`librtvision_parsers.so`)
 
 ## Layering
 
 ```text
 nvinfer ──► ds_adapter.cpp (DeepStream types) ──► core/*.cpp (plain C++17) ──► std::vector<Detection>
-                 ▲ reads parser.ini once (PERCEPTRA_PARSER_CONFIG)
+                 ▲ reads parser.ini once (RTVISION_PARSER_CONFIG)
 ```
 
 `core/` must compile and be unit-tested **without** DeepStream or CUDA. It is also intended for reuse by a future open-source backend.
@@ -13,7 +13,7 @@ nvinfer ──► ds_adapter.cpp (DeepStream types) ──► core/*.cpp (plain 
 ## Core types (`core/detection.hpp`)
 
 ```cpp
-namespace perceptra {
+namespace rtvision {
 enum class BoxFormat { XYXY_PX, XYXY_NORM, CXCYWH_PX, CXCYWH_NORM };
 enum class Activation { NONE, SIGMOID, SOFTMAX };
 
@@ -60,10 +60,10 @@ Common post-steps (all families, in order):
 Exported symbols (each with `CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE`):
 
 ```cpp
-extern "C" bool NvDsInferParsePerceptra_YoloE2E    (PARSE_ARGS);
-extern "C" bool NvDsInferParsePerceptra_YoloRaw    (PARSE_ARGS);
-extern "C" bool NvDsInferParsePerceptra_Detr       (PARSE_ARGS);
-extern "C" bool NvDsInferParsePerceptra_EfficientNms(PARSE_ARGS);
+extern "C" bool NvDsInferParseRTVision_YoloE2E    (PARSE_ARGS);
+extern "C" bool NvDsInferParseRTVision_YoloRaw    (PARSE_ARGS);
+extern "C" bool NvDsInferParseRTVision_Detr       (PARSE_ARGS);
+extern "C" bool NvDsInferParseRTVision_EfficientNms(PARSE_ARGS);
 // PARSE_ARGS = std::vector<NvDsInferLayerInfo> const&, NvDsInferNetworkInfo const&,
 //              NvDsInferParseDetectionParams const&, std::vector<NvDsInferParseObjectInfo>&
 ```
@@ -102,6 +102,6 @@ topk=300
 | robustness | empty tensors, NaN scores, negative class ids |
 
 ## Verifying a new model (manual, documented in README)
-1. `python -m perceptra_tools.onnx_inspect model.onnx` — prints output names and shapes, and suggests a family.
-2. Run Perceptra with `publish.backend=stdout` and `outputs.file=annotated.mp4` on a sample clip.
+1. `python -m rtvision_tools.onnx_inspect model.onnx` — prints output names and shapes, and suggests a family.
+2. Run RTVision with `publish.backend=stdout` and `outputs.file=annotated.mp4` on a sample clip.
 3. Compare against the model vendor's own predictions on the same frames (box IoU > 0.9 for matched objects at the same threshold).

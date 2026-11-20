@@ -20,4 +20,4 @@ classes:
   thresholds: { default: 0.4 }
 precision: fp16
 messaging:
-  topic: perceptra.it
+  topic: rtvision.it

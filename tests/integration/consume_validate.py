@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 Abhinand A S
-"""Validate Perceptra events (JSON Lines) against schemas/detection_event.v1.schema.json.
+"""Validate RTVision events (JSON Lines) against schemas/detection_event.v1.schema.json.
 
-    docker logs -f perceptra 2>/dev/null | \\
+    docker logs -f rtvision 2>/dev/null | \\
         python3 tests/integration/consume_validate.py --stdin --min-events 3 \\
             --sensor-id it-cam-0 --require-objects
 
@@ -25,7 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 
-from perceptra_tools.schemas import ConfigError, validate_event  # noqa: E402
+from rtvision_tools.schemas import ConfigError, validate_event  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:

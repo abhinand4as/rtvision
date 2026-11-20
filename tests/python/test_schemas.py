@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 from conftest import EXAMPLE_CONFIG, EXAMPLES, REPO
-from perceptra_tools.schemas import (
+from rtvision_tools.schemas import (
     ConfigError,
     apply_env_overrides,
     load_model_config,
@@ -103,11 +103,11 @@ def test_env_overrides_types_and_paths() -> None:
     applied = apply_env_overrides(
         data,
         {
-            "PERCEPTRA__PUBLISH__KAFKA__BROKERS": "kafka:9092",
-            "PERCEPTRA__SERVICE__MAX_STREAMS": "8",
-            "PERCEPTRA__SERVICE__SOURCES__FORCE_TCP": "false",
-            "PERCEPTRA__INFERENCE__PRECISION": "null",
-            "PERCEPTRA_MODEL": "ignored",  # single underscore: not an override
+            "RTVISION__PUBLISH__KAFKA__BROKERS": "kafka:9092",
+            "RTVISION__SERVICE__MAX_STREAMS": "8",
+            "RTVISION__SERVICE__SOURCES__FORCE_TCP": "false",
+            "RTVISION__INFERENCE__PRECISION": "null",
+            "RTVISION_MODEL": "ignored",  # single underscore: not an override
         },
     )
     assert applied == [
@@ -124,11 +124,11 @@ def test_env_overrides_types_and_paths() -> None:
 
 def test_env_override_validated(tmp_path: Path) -> None:
     with pytest.raises(ConfigError, match=r"service\.max_streams"):
-        load_service_config(EXAMPLE_CONFIG, env={"PERCEPTRA__SERVICE__MAX_STREAMS": "0"})
+        load_service_config(EXAMPLE_CONFIG, env={"RTVISION__SERVICE__MAX_STREAMS": "0"})
     with pytest.raises(ConfigError, match="only scalar"):
-        apply_env_overrides({}, {"PERCEPTRA__SERVICE": "{a: 1}"})
+        apply_env_overrides({}, {"RTVISION__SERVICE": "{a: 1}"})
     with pytest.raises(ConfigError, match="not a section"):
-        apply_env_overrides({"service": 3}, {"PERCEPTRA__SERVICE__X": "1"})
+        apply_env_overrides({"service": 3}, {"RTVISION__SERVICE__X": "1"})
 
 
 def _doc_event() -> dict:
@@ -147,7 +147,7 @@ def test_event_schema_doc_example_valid() -> None:
     [
         lambda e: e.pop("sensor"),
         lambda e: e.update(timestamp="20-11-2026"),
-        lambda e: e.update(schema="perceptra.detection.v2"),
+        lambda e: e.update(schema="rtvision.detection.v2"),
         lambda e: e["objects"][0].update(confidence=1.5),
         lambda e: e["objects"][0]["bbox"].pop("width"),
     ],

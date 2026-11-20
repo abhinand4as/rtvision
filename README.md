@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Perceptra
+# RTVision
 
-Perceptra is a real-time, multi-stream object-detection microservice. You add and remove cameras
+RTVision is a real-time, multi-stream object-detection microservice. You add and remove cameras
 (RTSP or files) at runtime through a REST API. A configurable detector runs on the GPU, objects are
 tracked across frames, and one JSON event per sampled frame is published to Kafka (or stdout/file).
 
@@ -13,7 +13,7 @@ microservice (Apache-2.0).
   (Apache-2.0)**.
 - **Streams at runtime** over REST (`POST /api/v1/stream/add`), batched on one GPU.
 - **Tracking** (NvDCF, NvSORT, IOU) with stable track ids, optional ReID embeddings.
-- **Documented event schema** `perceptra.detection.v1`, JSON Schema in `schemas/`.
+- **Documented event schema** `rtvision.detection.v1`, JSON Schema in `schemas/`.
 - **Operations:** `/live`, `/ready`, `/startup`, Prometheus `/metrics`, model hot swap without
   dropping streams, graceful shutdown.
 
@@ -37,7 +37,7 @@ All commands run from the repository root.
 #    creates ~/.venvs/rfdetr-export and downloads the checkpoint (~400 MB).
 tools/export/rfdetr/export.sh
 
-# 2. Build the image and start Kafka + Perceptra. The first build pulls the DeepStream base image
+# 2. Build the image and start Kafka + RTVision. The first build pulls the DeepStream base image
 #    (~28 GB) and takes a while.
 docker compose -f deploy/compose/compose.yaml up -d --build
 
@@ -56,7 +56,7 @@ curl -s -XPOST localhost:9000/api/v1/stream/add -d '{
 # 5. Watch the events (Ctrl-C to stop).
 docker compose -f deploy/compose/compose.yaml exec -T kafka \
   /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 \
-  --topic perceptra.rfdetr-s-coco | python3 examples/consumer/print_events.py
+  --topic rtvision.rfdetr-s-coco | python3 examples/consumer/print_events.py
 
 # 6. Remove the camera and stop.
 curl -s -XPOST localhost:9000/api/v1/stream/remove -d '{
@@ -68,7 +68,7 @@ docker compose -f deploy/compose/compose.yaml down
 
 Step 5 prints one line per event, e.g.
 `2026-11-20T14:10:41.487Z cam-1 frame=30 objects=11 car=6 person=3 backpack=1 bus=1`.
-For a per-camera people count, run the people model (`PERCEPTRA_MODEL=rfdetr-s-people` before
+For a per-camera people count, run the people model (`RTVISION_MODEL=rfdetr-s-people` before
 step 2) and pipe topic `people-raw` into `python3 examples/consumer/occupancy.py`.
 
 The sample video is about 50 seconds long and does not loop. At its end DeepStream removes the
@@ -79,13 +79,13 @@ which is harmless. RTSP cameras stay until you remove them.
 
 | What | Where |
 |---|---|
-| Model selection | `PERCEPTRA_MODEL` (a directory under `models/examples/`, mounted at `/opt/perceptra/models`) |
+| Model selection | `RTVISION_MODEL` (a directory under `models/examples/`, mounted at `/opt/rtvision/models`) |
 | Compose knobs (image, bind address, GPU, models dir) | `deploy/compose/.env.example` → copy to `.env` |
-| Service settings (`perceptra.yaml`) | `config/perceptra.example.yaml`; override any value with `PERCEPTRA__SECTION__KEY` env vars |
+| Service settings (`rtvision.yaml`) | `config/rtvision.example.yaml`; override any value with `RTVISION__SECTION__KEY` env vars |
 | Full reference | [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) |
 
 The REST API (9000) and ops server (9464) do not authenticate. Compose publishes them on
-`127.0.0.1` only; set `PERCEPTRA_BIND=0.0.0.0` only on a trusted network.
+`127.0.0.1` only; set `RTVISION_BIND=0.0.0.0` only on a trusted network.
 
 ## Documentation
 
@@ -95,7 +95,7 @@ The REST API (9000) and ops server (9464) do not authenticate. Compose publishes
 | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Common problems, exit codes, log lines |
 | [`docs/API.md`](docs/API.md) | Stream REST API and ops endpoints |
 | [`docs/EVENT_SCHEMA.md`](docs/EVENT_SCHEMA.md) | Kafka/JSON event format |
-| [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) | `perceptra.yaml` and `model.yaml` reference |
+| [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) | `rtvision.yaml` and `model.yaml` reference |
 | [`docs/PARSERS.md`](docs/PARSERS.md) | Supported model output families |
 | [`docs/TESTING.md`](docs/TESTING.md) | Unit and integration tests |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Design, diagrams, decisions |
@@ -126,7 +126,7 @@ project was implemented milestone by milestone from the specification in this re
 - **Model weights:** licensed separately by their owners and never committed. The default model,
   RF-DETR Small (`models/examples/rfdetr-s-coco`), is Apache-2.0; you export it locally with
   `tools/export/rfdetr/export.sh`. Ultralytics YOLO models (incl. YOLO26) are AGPL-3.0 unless you
-  hold an Ultralytics Enterprise licence. `perceptra-run` refuses non-permissive model licences
+  hold an Ultralytics Enterprise licence. `rtvision-run` refuses non-permissive model licences
   unless you accept them explicitly. See `docs/LICENSING.md`.
 - **Video codecs:** H.264/H.265 are decoded by the GPU's hardware decoder through DeepStream; no
   software codec packages are added. Products that decode these formats may need patent licences

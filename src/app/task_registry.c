@@ -14,7 +14,7 @@ static gboolean unsupported_init(GError **error) {
     return FALSE;
 }
 
-static guint unsupported_fill(AppCtx *app_ctx, NvDsFrameMeta *frame_meta, PerceptraFrameEvent *ev) {
+static guint unsupported_fill(AppCtx *app_ctx, NvDsFrameMeta *frame_meta, RTVisionFrameEvent *ev) {
     (void)app_ctx;
     (void)frame_meta;
     (void)ev;
@@ -24,15 +24,15 @@ static guint unsupported_fill(AppCtx *app_ctx, NvDsFrameMeta *frame_meta, Percep
 static void unsupported_shutdown(void) {}
 
 /* Reserved seams (docs/ROADMAP.md): instance segmentation and pose. */
-static const PerceptraTaskHandler task_segment = {"segment", unsupported_init, unsupported_fill,
-                                                  unsupported_shutdown};
-static const PerceptraTaskHandler task_pose = {"pose", unsupported_init, unsupported_fill,
-                                               unsupported_shutdown};
+static const RTVisionTaskHandler task_segment = {"segment", unsupported_init, unsupported_fill,
+                                                 unsupported_shutdown};
+static const RTVisionTaskHandler task_pose = {"pose", unsupported_init, unsupported_fill,
+                                              unsupported_shutdown};
 
-static const PerceptraTaskHandler *const registry[] = {&perceptra_task_detect, &task_segment,
-                                                       &task_pose};
+static const RTVisionTaskHandler *const registry[] = {&rtvision_task_detect, &task_segment,
+                                                      &task_pose};
 
-const PerceptraTaskHandler *perceptra_task_get(const char *task) {
+const RTVisionTaskHandler *rtvision_task_get(const char *task) {
     for (guint i = 0; task && i < G_N_ELEMENTS(registry); i++)
         if (strcmp(registry[i]->name, task) == 0)
             return registry[i];

@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace perceptra {
+namespace rtvision {
 
 std::vector<Detection> decode_efficient_nms(const std::vector<TensorView> &t,
                                             const ParseParams &p) {
@@ -52,4 +52,4 @@ std::vector<Detection> decode_efficient_nms(const std::vector<TensorView> &t,
     return out;
 }
 
-} // namespace perceptra
+} // namespace rtvision

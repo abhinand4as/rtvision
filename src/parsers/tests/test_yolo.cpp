@@ -9,7 +9,7 @@
 #include "test_harness.hpp"
 #include "test_util.hpp"
 
-using namespace perceptra;
+using namespace rtvision;
 
 TEST(e2e_basic) {
     // 3 rows -> 2 kept (one under threshold); output sorted by score.

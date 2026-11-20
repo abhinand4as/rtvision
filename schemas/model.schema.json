@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/perceptra/model.schema.json",
+  "$id": "https://example.invalid/rtvision/model.schema.json",
   "$comment": "SPDX-License-Identifier: Apache-2.0",
-  "title": "Perceptra model description",
+  "title": "RTVision model description",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "name", "version", "task", "license", "files", "input", "output", "precision"],

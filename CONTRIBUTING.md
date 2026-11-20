@@ -1,12 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Contributing to Perceptra
+# Contributing to RTVision
 
 Thank you for contributing! Please read [ARCHITECTURE.md](ARCHITECTURE.md) and
 [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) first.
 
 ## Licence of contributions
 
-Perceptra is licensed under the [Apache License 2.0](LICENSE). By submitting a contribution
+RTVision is licensed under the [Apache License 2.0](LICENSE). By submitting a contribution
 you agree that it is licensed under Apache-2.0 (Apache-2.0 §5).
 
 ## Developer Certificate of Origin (DCO)

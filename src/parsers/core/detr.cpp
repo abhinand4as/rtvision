@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace perceptra {
+namespace rtvision {
 
 std::vector<Detection> decode_detr(const std::vector<TensorView> &t, const ParseParams &p) {
     if (t.size() != 2)
@@ -84,4 +84,4 @@ std::vector<Detection> decode_detr(const std::vector<TensorView> &t, const Parse
     return out;
 }
 
-} // namespace perceptra
+} // namespace rtvision

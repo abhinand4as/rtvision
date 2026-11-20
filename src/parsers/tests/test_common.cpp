@@ -11,7 +11,7 @@
 #include "test_harness.hpp"
 #include "test_util.hpp"
 
-using namespace perceptra;
+using namespace rtvision;
 
 static const float kNaN = std::numeric_limits<float>::quiet_NaN();
 static const float kInf = std::numeric_limits<float>::infinity();

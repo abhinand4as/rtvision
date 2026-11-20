@@ -1,12 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # HTTP APIs
 
-Perceptra exposes two HTTP servers:
+RTVision exposes two HTTP servers:
 
 | Port | Server | Purpose |
 |---|---|---|
 | `9000` (`service.rest_port`) | DeepStream `nvmultiurisrcbin` built-in REST server | stream management |
-| `9464` (`observability.ops_port`) | Perceptra ops server (libsoup) | health probes, metrics, info |
+| `9464` (`observability.ops_port`) | RTVision ops server (libsoup) | health probes, metrics, info |
 
 Neither server authenticates requests. Expose them only on trusted networks or behind a gateway.
 
@@ -14,7 +14,7 @@ Neither server authenticates requests. Expose them only on trusted networks or b
 
 ## Stream management (port 9000)
 
-The payload format is DeepStream's (`Gst-nvmultiurisrcbin` documentation). Perceptra does not change it, so existing VST/RT-CV clients work unchanged. **Implementer:** verify the exact route list and response bodies against the DeepStream 9.1 docs, and record any differences in `docs/DEVIATIONS.md`.
+The payload format is DeepStream's (`Gst-nvmultiurisrcbin` documentation). RTVision does not change it, so existing VST/RT-CV clients work unchanged. **Implementer:** verify the exact route list and response bodies against the DeepStream 9.1 docs, and record any differences in `docs/DEVIATIONS.md`.
 
 ### Add a stream
 `POST /api/v1/stream/add`
@@ -58,7 +58,7 @@ curl -sS -XPOST localhost:9000/api/v1/stream/remove -d @remove.json
 | GET | `/ready` | pipeline PLAYING and publisher healthy (Kafka connected, or backend ≠ kafka) | `{"status":"ready","streams":2}` |
 | GET | `/live` | main-loop heartbeat < 10 s old | `{"status":"alive"}` |
 | GET | `/metrics` | always | Prometheus text exposition (v0.0.4) |
-| GET | `/info` | always | `{"service":"perceptra","version":"0.1.0","model":{"name","version","task","family","precision","license"},"max_streams":4,"schema":"perceptra.detection.v1"}` |
+| GET | `/info` | always | `{"service":"rtvision","version":"0.1.0","model":{"name","version","task","family","precision","license"},"max_streams":4,"schema":"rtvision.detection.v1"}` |
 
 Non-200 responses use 503 with `{"status":"<reason>"}` (e.g. `starting`, `pipeline not playing`, `publisher not connected`, `main loop stalled`). Other methods than GET/HEAD get 405, unknown paths 404. `/live` answers 200 while the service is still starting (pipeline creation and TensorRT engine builds run before the main loop); use `/startup` as the startup probe.
 

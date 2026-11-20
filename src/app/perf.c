@@ -30,7 +30,7 @@
 static GMutex fps_lock;
 static guint active_sources;
 /* Last report, in report order (for metrics). */
-static PerceptraPerfStream last_report[MAX_SOURCE_BINS];
+static RTVisionPerfStream last_report[MAX_SOURCE_BINS];
 static guint last_report_len;
 
 static const char *or_dash(const char *s) {
@@ -38,7 +38,7 @@ static const char *or_dash(const char *s) {
 }
 
 static void record(guint source_id, const char *sensor_id, gdouble fps) {
-    PerceptraPerfStream *r = &last_report[last_report_len++];
+    RTVisionPerfStream *r = &last_report[last_report_len++];
     r->source_id = source_id;
     if (sensor_id && *sensor_id)
         g_strlcpy(r->sensor_id, sensor_id, sizeof(r->sensor_id));
@@ -47,7 +47,7 @@ static void record(guint source_id, const char *sensor_id, gdouble fps) {
     r->fps = fps;
 }
 
-void perceptra_perf_cb(gpointer context, NvDsAppPerfStruct *perf) {
+void rtvision_perf_cb(gpointer context, NvDsAppPerfStruct *perf) {
     (void)context;
     guint active = 0;
 
@@ -84,14 +84,14 @@ void perceptra_perf_cb(gpointer context, NvDsAppPerfStruct *perf) {
     PLOG_INFO("perf", "event=perf_summary active_sources=%u", active);
 }
 
-guint perceptra_perf_active_sources(void) {
+guint rtvision_perf_active_sources(void) {
     g_mutex_lock(&fps_lock);
     guint n = active_sources;
     g_mutex_unlock(&fps_lock);
     return n;
 }
 
-guint perceptra_perf_snapshot(PerceptraPerfStream *out, guint max) {
+guint rtvision_perf_snapshot(RTVisionPerfStream *out, guint max) {
     g_mutex_lock(&fps_lock);
     guint n = MIN(max, last_report_len);
     memcpy(out, last_report, n * sizeof(*out));

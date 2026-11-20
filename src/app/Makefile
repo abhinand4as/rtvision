@@ -3,7 +3,7 @@
 #
 # Modifications Copyright (c) 2026 Abhinand A S
 # Changes: derived from RT-CV src/Makefile; DeepStream and CUDA versions detected from the image
-# instead of hard-coded; out-of-tree objects; strict warnings for Perceptra sources only; dropped
+# instead of hard-coded; out-of-tree objects; strict warnings for RTVision sources only; dropped
 # frame_dump.cpp, -lnvds_batch_jpegenc, DS_VERSION_MAJOR/MINOR and the X11/json-glib-only bits.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,10 +18,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Builds the `perceptra` binary INSIDE the DeepStream container: the deepstream-app and
+# Builds the `rtvision` binary INSIDE the DeepStream container: the deepstream-app and
 # apps-common sources are compiled from the image (never vendored, see docs/LICENSING.md).
 
-APP := perceptra
+APP := rtvision
 BUILD_DIR ?= build
 
 DS_ROOT ?= /opt/nvidia/deepstream/deepstream
@@ -42,7 +42,7 @@ endif
 
 PKGS := gstreamer-1.0 gstreamer-video-1.0 x11 json-glib-1.0 gio-2.0 rdkafka libsoup-3.0
 
-# Perceptra sources (strict warnings).
+# RTVision sources (strict warnings).
 APP_SRCS := main.c app_config.c probe.c perf.c log.c ds_compat.c event_model.c \
             event_serialize.c publisher.c publisher_stream.c publisher_kafka.c \
             task_registry.c task_detect.c timestamps.c embeddings.c metrics.c ota.c \

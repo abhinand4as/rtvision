@@ -44,7 +44,7 @@
 #define URI_UTC_START_DELIM "__"
 #define URI_UTC_END_DELIM "_UTC"
 
-gboolean perceptra_utc_from_uri(const char *uri, gint64 *unix_ns) {
+gboolean rtvision_utc_from_uri(const char *uri, gint64 *unix_ns) {
     if (uri == NULL)
         return FALSE;
     /* the field after the last "__" */
@@ -116,29 +116,29 @@ typedef struct {
     guint64 first_pts_ns;
 } StreamClock;
 
-static StreamClock clocks[PERCEPTRA_TS_MAX_STREAMS];
-static PerceptraTimestampSource configured_source = PERCEPTRA_TS_SYSTEM;
+static StreamClock clocks[RTVISION_TS_MAX_STREAMS];
+static RTVisionTimestampSource configured_source = RTVISION_TS_SYSTEM;
 static guint64 backward_total;
 
-void perceptra_timestamps_init(PerceptraTimestampSource configured) {
+void rtvision_timestamps_init(RTVisionTimestampSource configured) {
     configured_source = configured;
     memset(clocks, 0, sizeof(clocks));
     backward_total = 0;
 }
 
-guint64 perceptra_timestamps_backward_ntp_count(void) {
+guint64 rtvision_timestamps_backward_ntp_count(void) {
     return __atomic_load_n(&backward_total, __ATOMIC_RELAXED);
 }
 
-static gint64 system_ms(PerceptraTimestampSource *used) {
-    *used = PERCEPTRA_TS_SYSTEM;
+static gint64 system_ms(RTVisionTimestampSource *used) {
+    *used = RTVISION_TS_SYSTEM;
     return g_get_real_time() / 1000;
 }
 
-gint64 perceptra_timestamp_for_frame(guint source_id, gint frame_num, guint64 ntp_ns,
-                                     guint64 buf_pts_ns, const char *uri,
-                                     PerceptraTimestampSource *used) {
-    if (source_id >= PERCEPTRA_TS_MAX_STREAMS)
+gint64 rtvision_timestamp_for_frame(guint source_id, gint frame_num, guint64 ntp_ns,
+                                    guint64 buf_pts_ns, const char *uri,
+                                    RTVisionTimestampSource *used) {
+    if (source_id >= RTVISION_TS_MAX_STREAMS)
         return system_ms(used);
     StreamClock *c = &clocks[source_id];
     if (!c->active || frame_num == 0 || frame_num < c->last_frame_num) {
@@ -148,7 +148,7 @@ gint64 perceptra_timestamp_for_frame(guint source_id, gint frame_num, guint64 nt
     c->last_frame_num = frame_num;
 
     switch (configured_source) {
-    case PERCEPTRA_TS_NTP:
+    case RTVISION_TS_NTP:
         if (ntp_ns == 0)
             return system_ms(used); /* no RTCP sender report (e.g. file source) */
         if (ntp_ns < c->last_ntp_ns) {
@@ -160,12 +160,12 @@ gint64 perceptra_timestamp_for_frame(guint source_id, gint frame_num, guint64 nt
                           source_id, ntp_ns, c->last_ntp_ns, c->backward_count);
         }
         c->last_ntp_ns = ntp_ns;
-        *used = PERCEPTRA_TS_NTP;
+        *used = RTVISION_TS_NTP;
         return (gint64)(ntp_ns / (guint64)NS_PER_MS);
-    case PERCEPTRA_TS_URI_UTC:
+    case RTVISION_TS_URI_UTC:
         if (!c->uri_checked) {
             c->uri_checked = TRUE;
-            c->uri_ok = perceptra_utc_from_uri(uri, &c->uri_base_ns);
+            c->uri_ok = rtvision_utc_from_uri(uri, &c->uri_base_ns);
             c->first_pts_ns = buf_pts_ns;
             if (!c->uri_ok)
                 PLOG_WARN("timestamps",
@@ -174,9 +174,9 @@ gint64 perceptra_timestamp_for_frame(guint source_id, gint frame_num, guint64 nt
         }
         if (!c->uri_ok)
             return system_ms(used);
-        *used = PERCEPTRA_TS_URI_UTC;
+        *used = RTVISION_TS_URI_UTC;
         return (c->uri_base_ns + (gint64)(buf_pts_ns - c->first_pts_ns)) / NS_PER_MS;
-    case PERCEPTRA_TS_SYSTEM:
+    case RTVISION_TS_SYSTEM:
     default:
         return system_ms(used);
     }

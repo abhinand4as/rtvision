@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace perceptra {
+namespace rtvision {
 
 float sigmoid(float x) {
     return 1.0f / (1.0f + std::exp(-x));
@@ -152,4 +152,4 @@ const char *to_string(Activation a) {
     return "?";
 }
 
-} // namespace perceptra
+} // namespace rtvision

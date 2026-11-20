@@ -3,11 +3,11 @@
 # Copyright (c) 2026 Abhinand A S
 #
 # Integration test (GPU host), docs/TESTING.md:
-#   deploy (compose: Kafka + Perceptra) -> health -> add stream -> consume >= MIN_EVENTS from
+#   deploy (compose: Kafka + RTVision) -> health -> add stream -> consume >= MIN_EVENTS from
 #   Kafka, each validated against the event schema -> key/headers -> metrics -> remove stream ->
-#   `docker compose stop perceptra` exits 0 within STOP_TIMEOUT_S.
+#   `docker compose stop rtvision` exits 0 within STOP_TIMEOUT_S.
 #
-#   tests/integration/run_all.sh            # builds perceptra:local if the image is missing
+#   tests/integration/run_all.sh            # builds rtvision:local if the image is missing
 #   BUILD=1 tests/integration/run_all.sh    # always rebuild the image first
 #   KEEP_STACK=1 ...                        # leave the stack running afterwards (debugging)
 #
@@ -23,8 +23,8 @@ PYTHON="${PYTHON:-python3}"
 finish() {
     local rc=$?
     if ((rc != 0)); then
-        echo "---- perceptra logs (last 40 lines) ----" >&2
-        compose logs --no-color --tail 40 perceptra >&2 2>&1 || true
+        echo "---- rtvision logs (last 40 lines) ----" >&2
+        compose logs --no-color --tail 40 rtvision >&2 2>&1 || true
     fi
     if [[ "${KEEP_STACK:-0}" != 1 ]]; then
         compose down --remove-orphans >/dev/null 2>&1 || true
@@ -38,37 +38,37 @@ docker compose version >/dev/null 2>&1 || fail "docker compose v2 not found"
 command -v curl >/dev/null || fail "curl not found"
 "$PYTHON" -c 'import jsonschema, yaml' 2>/dev/null ||
     fail "$PYTHON lacks jsonschema/PyYAML (pip install -e '.[dev]', or set PYTHON=...)"
-image="${PERCEPTRA_IMAGE:-perceptra:local}"
+image="${RTVISION_IMAGE:-rtvision:local}"
 if [[ "${BUILD:-0}" == 1 ]] || ! docker image inspect "$image" >/dev/null 2>&1; then
     info "building $image (docker/Dockerfile)"
-    compose build perceptra
+    compose build rtvision
 fi
 
 # Config and licence gate, in seconds instead of a restart loop (exit 2 config, 3 licence).
 set +e
-dryrun="$(compose run --rm --no-deps -T perceptra --dry-run 2>&1 >/dev/null)"
+dryrun="$(compose run --rm --no-deps -T rtvision --dry-run 2>&1 >/dev/null)"
 rc=$?
 set -e
 if ((rc != 0)); then
     grep -v '^\s*$' <<<"$dryrun" | tail -12 >&2
-    ((rc == 3)) && fail "model licence not accepted: set PERCEPTRA_ACCEPT_MODEL_LICENSE (shown" \
+    ((rc == 3)) && fail "model licence not accepted: set RTVISION_ACCEPT_MODEL_LICENSE (shown" \
         "above) in deploy/compose/.env or the environment, after reading docs/LICENSING.md"
-    model="${PERCEPTRA_MODEL:-rfdetr-s-coco}"
+    model="${RTVISION_MODEL:-rfdetr-s-coco}"
     if [[ "$dryrun" == *"files.onnx"* ]]; then
         hint="see models/examples/$model/README.md"
         [[ "$model" == rfdetr-* ]] && hint="run tools/export/rfdetr/export.sh first"
         fail "ONNX for $model missing: $hint"
     fi
-    fail "perceptra-run --dry-run exit $rc (configuration error above)"
+    fail "rtvision-run --dry-run exit $rc (configuration error above)"
 fi
-pass "configuration valid (perceptra-run --dry-run)"
+pass "configuration valid (rtvision-run --dry-run)"
 
 trap finish EXIT
 
 # ---- 1. deploy (fresh Kafka; the engine cache volume is kept) --------------------------------
 compose down --remove-orphans >/dev/null 2>&1 || true
 compose up -d
-pass "compose up ($image, model ${PERCEPTRA_MODEL:-rfdetr-s-coco})"
+pass "compose up ($image, model ${RTVISION_MODEL:-rfdetr-s-coco})"
 
 # ---- 2-3. health -----------------------------------------------------------------------------
 "$REPO_ROOT/tests/integration/health.sh"
@@ -77,8 +77,8 @@ pass "compose up ($image, model ${PERCEPTRA_MODEL:-rfdetr-s-coco})"
 "$REPO_ROOT/tests/integration/add_stream.sh"
 
 # ---- 5. consume from Kafka and validate every event ------------------------------------------
-topic="${TOPIC:-$(compose exec -T perceptra sed -n 's/^kafka_topic=//p' \
-    /tmp/perceptra/generated/app.ini | tr -d '\r')}"
+topic="${TOPIC:-$(compose exec -T rtvision sed -n 's/^kafka_topic=//p' \
+    /tmp/rtvision/generated/app.ini | tr -d '\r')}"
 [[ -n "$topic" ]] || fail "could not read kafka_topic from the generated app.ini"
 info "consuming topic $topic (up to ${CONSUME_TIMEOUT_S}s)"
 # `timeout` needs a real command, not the compose() shell function.
@@ -100,25 +100,25 @@ meta="$(compose exec -T kafka /opt/kafka/bin/kafka-console-consumer.sh \
     --timeout-ms 20000 --formatter-property print.key=true \
     --formatter-property print.headers=true --formatter-property print.value=false \
     --formatter-property key.separator='|' 2>/dev/null | head -1)"
-[[ "$meta" == *"schema:perceptra.detection.v1"* ]] || fail "Kafka header schema missing: $meta"
+[[ "$meta" == *"schema:rtvision.detection.v1"* ]] || fail "Kafka header schema missing: $meta"
 [[ "$meta" == *"content-type:application/json"* ]] || fail "Kafka header content-type missing: $meta"
 [[ "$meta" == *"|$IT_CAMERA_ID"* ]] || fail "Kafka key is not $IT_CAMERA_ID: $meta"
 pass "Kafka key=$IT_CAMERA_ID, headers schema + content-type"
 
 # ---- 6. metrics ------------------------------------------------------------------------------
-published="$(metric perceptra_events_published_total)"
-((published > 0)) || fail "perceptra_events_published_total is $published"
-pass "perceptra_events_published_total $published"
+published="$(metric rtvision_events_published_total)"
+((published > 0)) || fail "rtvision_events_published_total is $published"
+pass "rtvision_events_published_total $published"
 
 # ---- 7. remove the stream --------------------------------------------------------------------
 "$REPO_ROOT/tests/integration/remove_stream.sh"
 
 # ---- 8. graceful stop ------------------------------------------------------------------------
-cid="$(compose ps -q perceptra)"
+cid="$(compose ps -q rtvision)"
 start=$SECONDS
-compose stop -t 20 perceptra >/dev/null
+compose stop -t 20 rtvision >/dev/null
 took=$((SECONDS - start))
 exit_code="$(docker inspect -f '{{.State.ExitCode}}' "$cid")"
-[[ "$exit_code" == 0 ]] || fail "perceptra exited with $exit_code after stop"
+[[ "$exit_code" == 0 ]] || fail "rtvision exited with $exit_code after stop"
 ((took <= STOP_TIMEOUT_S)) || fail "stop took ${took}s (limit ${STOP_TIMEOUT_S}s)"
 pass "compose stop: exit 0 in ${took}s"

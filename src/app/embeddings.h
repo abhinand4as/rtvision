@@ -10,8 +10,8 @@
  * tracker.reid_store_age > 0 the last feature of every track is cached for that many frames, so
  * sampled frames can still carry an embedding. Streaming thread only.
  */
-#ifndef PERCEPTRA_EMBEDDINGS_H
-#define PERCEPTRA_EMBEDDINGS_H
+#ifndef RTVISION_EMBEDDINGS_H
+#define RTVISION_EMBEDDINGS_H
 
 #include <glib.h>
 
@@ -20,21 +20,21 @@
 
 G_BEGIN_DECLS
 
-#define PERCEPTRA_EMB_MAX_TRACKS_PER_STREAM 4096
+#define RTVISION_EMB_MAX_TRACKS_PER_STREAM 4096
 
-void perceptra_embeddings_init(gboolean enabled, guint store_age_frames);
-gboolean perceptra_embeddings_enabled(void);
+void rtvision_embeddings_init(gboolean enabled, guint store_age_frames);
+gboolean rtvision_embeddings_enabled(void);
 
 /* Every frame (before building an event): caches the ReID features present on this frame and
  * evicts entries older than store_age. Resets the stream on frame_num == 0. */
-void perceptra_embeddings_observe_frame(NvDsFrameMeta *frame_meta);
+void rtvision_embeddings_observe_frame(NvDsFrameMeta *frame_meta);
 
 /* A newly allocated copy of the object's current (or cached) feature, or NULL. */
-PerceptraEmbedding *perceptra_embeddings_for_object(NvDsFrameMeta *frame_meta,
-                                                    NvDsObjectMeta *obj_meta);
+RTVisionEmbedding *rtvision_embeddings_for_object(NvDsFrameMeta *frame_meta,
+                                                  NvDsObjectMeta *obj_meta);
 
-void perceptra_embeddings_shutdown(void);
+void rtvision_embeddings_shutdown(void);
 
 G_END_DECLS
 
-#endif /* PERCEPTRA_EMBEDDINGS_H */
+#endif /* RTVISION_EMBEDDINGS_H */

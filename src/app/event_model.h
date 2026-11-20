@@ -3,36 +3,36 @@
  * Copyright (c) 2026 Abhinand A S
  */
 
-/* event_model.h - in-memory form of one `perceptra.detection.v1` event (docs/EVENT_SCHEMA.md).
+/* event_model.h - in-memory form of one `rtvision.detection.v1` event (docs/EVENT_SCHEMA.md).
  *
  * Plain C + GLib only (no DeepStream types) so the serializer is unit-testable without a GPU.
  * One event = one sampled frame of one stream. The probe fills it on the streaming thread and
  * hands ownership to the publisher queue; serialization happens on the publisher thread.
  */
-#ifndef PERCEPTRA_EVENT_MODEL_H
-#define PERCEPTRA_EVENT_MODEL_H
+#ifndef RTVISION_EVENT_MODEL_H
+#define RTVISION_EVENT_MODEL_H
 
 #include <glib.h>
 
 G_BEGIN_DECLS
 
-#define PERCEPTRA_SCHEMA_ID "perceptra.detection.v1"
-#define PERCEPTRA_UUID_LEN 36
+#define RTVISION_SCHEMA_ID "rtvision.detection.v1"
+#define RTVISION_UUID_LEN 36
 
 typedef enum {
-    PERCEPTRA_TS_NTP = 0,
-    PERCEPTRA_TS_URI_UTC = 1,
-    PERCEPTRA_TS_SYSTEM = 2,
-} PerceptraTimestampSource;
+    RTVISION_TS_NTP = 0,
+    RTVISION_TS_URI_UTC = 1,
+    RTVISION_TS_SYSTEM = 2,
+} RTVisionTimestampSource;
 
-const char *perceptra_timestamp_source_name(PerceptraTimestampSource s);
-gboolean perceptra_timestamp_source_parse(const char *text, PerceptraTimestampSource *out);
+const char *rtvision_timestamp_source_name(RTVisionTimestampSource s);
+gboolean rtvision_timestamp_source_parse(const char *text, RTVisionTimestampSource *out);
 
 /* Tracker ReID feature (M5). Serialized as {"dim", "encoding":"base64-f32le", "data"}. */
 typedef struct {
     guint dim;
     gfloat *data; /* owned, dim floats */
-} PerceptraEmbedding;
+} RTVisionEmbedding;
 
 typedef struct {
     gboolean has_track_id; /* FALSE -> "track_id": null (untracked / tracker disabled) */
@@ -42,15 +42,15 @@ typedef struct {
     gboolean has_confidence; /* FALSE -> "confidence": null */
     gfloat confidence;
     gdouble left, top, width, height; /* source-resolution pixels */
-    PerceptraEmbedding *embedding;    /* owned; NULL unless include_embeddings */
+    RTVisionEmbedding *embedding;     /* owned; NULL unless include_embeddings */
     gpointer mask;                    /* reserved for task=segment: NULL in v1, never serialized */
     gpointer attributes;              /* reserved for secondary classifiers: NULL in v1 */
-} PerceptraObject;
+} RTVisionObject;
 
 typedef struct {
-    gchar event_id[PERCEPTRA_UUID_LEN + 1];
+    gchar event_id[RTVISION_UUID_LEN + 1];
     gint64 timestamp_ms; /* Unix epoch milliseconds, UTC */
-    PerceptraTimestampSource timestamp_source;
+    RTVisionTimestampSource timestamp_source;
     gchar *sensor_id;   /* owned, non-empty */
     gchar *sensor_name; /* owned, NULL -> null */
     guint stream_index;
@@ -58,8 +58,8 @@ typedef struct {
     guint frame_width, frame_height; /* source resolution */
     guint num_objects;
     guint capacity;
-    PerceptraObject objects[]; /* capacity entries, allocated with the event */
-} PerceptraFrameEvent;
+    RTVisionObject objects[]; /* capacity entries, allocated with the event */
+} RTVisionFrameEvent;
 
 /* Per-process constants shared by all events (not copied per event). */
 typedef struct {
@@ -67,15 +67,15 @@ typedef struct {
     const gchar *model_name;
     const gchar *model_version;
     const gchar *model_task;
-} PerceptraEventContext;
+} RTVisionEventContext;
 
 /* One allocation for the event and `capacity` objects (zeroed). */
-PerceptraFrameEvent *perceptra_event_new(guint capacity);
-void perceptra_event_free(PerceptraFrameEvent *ev);
+RTVisionFrameEvent *rtvision_event_new(guint capacity);
+void rtvision_event_free(RTVisionFrameEvent *ev);
 
 /* Sets ev->event_id to a random UUID v4. */
-void perceptra_event_set_random_id(PerceptraFrameEvent *ev);
+void rtvision_event_set_random_id(RTVisionFrameEvent *ev);
 
 G_END_DECLS
 
-#endif /* PERCEPTRA_EVENT_MODEL_H */
+#endif /* RTVISION_EVENT_MODEL_H */

@@ -3,12 +3,12 @@
  * Copyright (c) 2026 Abhinand A S
  */
 
-/* ds_compat.c - symbols that the in-image deepstream-app sources reference but that Perceptra
+/* ds_compat.c - symbols that the in-image deepstream-app sources reference but that RTVision
  * provides itself instead of compiling DeepStream's nvds_utils.cpp (which would add an OpenSSL
  * dependency for an unused SHA-256 helper). See docs/DEVIATIONS.md.
  *
  * nvds_get_hostname_with_ip() is only called by deepstream_app.c's msgapi error-propagation
- * path, which Perceptra never enables. Contract (nvds_utils.h): newly allocated string, caller
+ * path, which RTVision never enables. Contract (nvds_utils.h): newly allocated string, caller
  * frees with g_free(). Own implementation, not derived from DeepStream.
  */
 #include <glib.h>

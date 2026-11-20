@@ -4,9 +4,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "perceptra-tools"
+name = "rtvision-tools"
 version = "0.1.0.dev0"
-description = "Configuration generator and entrypoint for the Perceptra detection microservice"
+description = "Configuration generator and entrypoint for the RTVision detection microservice"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
@@ -22,14 +22,14 @@ dependencies = [
 dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
-perceptra-run = "perceptra_tools.run:main"
+rtvision-run = "rtvision_tools.run:main"
 
 [tool.setuptools.packages.find]
 where = ["tools"]
-include = ["perceptra_tools*"]
+include = ["rtvision_tools*"]
 
 [tool.setuptools.package-data]
-perceptra_tools = ["templates/*.j2"]
+rtvision_tools = ["templates/*.j2"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]

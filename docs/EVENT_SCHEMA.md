@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Event schema — `perceptra.detection.v1`
+# Event schema — `rtvision.detection.v1`
 
 One JSON message per **sampled frame per stream** (sampling: `publish.interval_frames`). The machine-readable definition is `schemas/detection_event.v1.schema.json`; the serializer output must validate against it.
 
@@ -7,18 +7,18 @@ One JSON message per **sampled frame per stream** (sampling: `publish.interval_f
 
 | Item | Value |
 |---|---|
-| Kafka topic | `publish.kafka.topic`, else `model.messaging.topic`, else `perceptra.<model.name>` |
+| Kafka topic | `publish.kafka.topic`, else `model.messaging.topic`, else `rtvision.<model.name>` |
 | Kafka key | `sensor.id` (keeps per-camera ordering), or none |
-| Kafka headers | `schema: perceptra.detection.v1`, `content-type: application/json` |
+| Kafka headers | `schema: rtvision.detection.v1`, `content-type: application/json` |
 | stdout / file | JSON Lines (one event per line, no pretty-printing) |
 
 ## Example
 
 ```json
 {
-  "schema": "perceptra.detection.v1",
+  "schema": "rtvision.detection.v1",
   "event_id": "5f0c2a3e-6a51-4c1e-9d7a-2b8c0f6e9a11",
-  "service": "perceptra",
+  "service": "rtvision",
   "timestamp": "2026-11-20T06:30:00.123Z",
   "timestamp_source": "ntp",
   "sensor": { "id": "cam-entrance-01", "name": "Entrance 1", "stream_index": 0 },
@@ -40,7 +40,7 @@ One JSON message per **sampled frame per stream** (sampling: `publish.interval_f
 
 | Field | Type | Notes |
 |---|---|---|
-| `schema` | const string | `perceptra.detection.v1` |
+| `schema` | const string | `rtvision.detection.v1` |
 | `event_id` | UUID v4 string | unique per message (`g_uuid_string_random`) |
 | `service` | string | `service.name` |
 | `timestamp` | RFC 3339 UTC, ms | see ARCHITECTURE §7 |
@@ -63,4 +63,4 @@ One JSON message per **sampled frame per stream** (sampling: `publish.interval_f
 
 ## Compatibility rules
 - Consumers must ignore unknown fields.
-- New optional fields may be added within v1. Removing or renaming fields, or changing their types, requires `perceptra.detection.v2`.
+- New optional fields may be added within v1. Removing or renaming fields, or changing their types, requires `rtvision.detection.v2`.

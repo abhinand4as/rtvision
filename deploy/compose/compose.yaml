@@ -1,18 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 Abhinand A S
 #
-# Development / integration stack: apache/kafka (KRaft, single node) + perceptra.
+# Development / integration stack: apache/kafka (KRaft, single node) + rtvision.
 #
 #   docker compose -f deploy/compose/compose.yaml up -d --build
 #   curl -s localhost:9464/ready
 #
-# Knobs (environment or deploy/compose/.env, see .env.example): PERCEPTRA_IMAGE, PERCEPTRA_MODEL,
-# PERCEPTRA_BIND, PERCEPTRA_HOST_MODELS_DIR, PERCEPTRA_GPU. Any perceptra.yaml scalar can be overridden
-# with PERCEPTRA__SECTION__KEY in the `environment` block below (docs/CONFIGURATION.md).
+# Knobs (environment or deploy/compose/.env, see .env.example): RTVISION_IMAGE, RTVISION_MODEL,
+# RTVISION_BIND, RTVISION_HOST_MODELS_DIR, RTVISION_GPU. Any rtvision.yaml scalar can be overridden
+# with RTVISION__SECTION__KEY in the `environment` block below (docs/CONFIGURATION.md).
 #
-# The REST API (9000) is unauthenticated: ports are published on 127.0.0.1 unless PERCEPTRA_BIND
-# is set (e.g. PERCEPTRA_BIND=0.0.0.0 on a trusted network).
-name: perceptra
+# The REST API (9000) is unauthenticated: ports are published on 127.0.0.1 unless RTVISION_BIND
+# is set (e.g. RTVISION_BIND=0.0.0.0 on a trusted network).
+name: rtvision
 
 services:
   kafka:
@@ -35,7 +35,7 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_NUM_PARTITIONS: 1
     ports:
-      - "${PERCEPTRA_BIND:-127.0.0.1}:9094:9094"
+      - "${RTVISION_BIND:-127.0.0.1}:9094:9094"
     healthcheck:
       test: ["CMD", "/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
       interval: 5s
@@ -43,8 +43,8 @@ services:
       retries: 24
       start_period: 10s
 
-  perceptra:
-    image: ${PERCEPTRA_IMAGE:-perceptra:local}
+  rtvision:
+    image: ${RTVISION_IMAGE:-rtvision:local}
     build:
       context: ../..
       dockerfile: docker/Dockerfile
@@ -52,26 +52,26 @@ services:
       kafka:
         condition: service_healthy
     environment:
-      PERCEPTRA_MODEL: ${PERCEPTRA_MODEL:-rfdetr-s-coco}
-      PERCEPTRA__PUBLISH__BACKEND: kafka
-      PERCEPTRA__PUBLISH__KAFKA__BROKERS: kafka:9092
+      RTVISION_MODEL: ${RTVISION_MODEL:-rfdetr-s-coco}
+      RTVISION__PUBLISH__BACKEND: kafka
+      RTVISION__PUBLISH__KAFKA__BROKERS: kafka:9092
       # Set to the SPDX id of a non-permissive model licence to accept it (docs/LICENSING.md).
-      PERCEPTRA_ACCEPT_MODEL_LICENSE: ${PERCEPTRA_ACCEPT_MODEL_LICENSE:-}
+      RTVISION_ACCEPT_MODEL_LICENSE: ${RTVISION_ACCEPT_MODEL_LICENSE:-}
     ports:
-      - "${PERCEPTRA_BIND:-127.0.0.1}:9000:9000"
-      - "${PERCEPTRA_BIND:-127.0.0.1}:9464:9464"
+      - "${RTVISION_BIND:-127.0.0.1}:9000:9000"
+      - "${RTVISION_BIND:-127.0.0.1}:9464:9464"
     volumes:
       # Model directories (model.yaml, labels, your ONNX files). Defaults to the examples in this
       # repository; weights are never committed, add them locally (models/examples/*/README.md).
-      - ${PERCEPTRA_HOST_MODELS_DIR:-../../models/examples}:/opt/perceptra/models:ro
+      - ${RTVISION_HOST_MODELS_DIR:-../../models/examples}:/opt/rtvision/models:ro
       # TensorRT engine cache: the first start builds the engine (minutes), later starts reuse it.
-      - engines:/opt/perceptra/engines
+      - engines:/opt/rtvision/engines
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              device_ids: ["${PERCEPTRA_GPU:-0}"]
+              device_ids: ["${RTVISION_GPU:-0}"]
               capabilities: [gpu]
     shm_size: 1gb
     # The binary exits within its shutdown watchdog (8 s by default); leave headroom before

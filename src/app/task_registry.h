@@ -8,8 +8,8 @@
  * v1: "detect" is implemented; "segment" and "pose" return stubs whose init() fails with
  * "task not supported in this version".
  */
-#ifndef PERCEPTRA_TASK_REGISTRY_H
-#define PERCEPTRA_TASK_REGISTRY_H
+#ifndef RTVISION_TASK_REGISTRY_H
+#define RTVISION_TASK_REGISTRY_H
 
 #include <glib.h>
 
@@ -25,16 +25,16 @@ typedef struct {
     /* Fills ev->objects (up to ev->capacity) from one frame. Runs on the streaming thread:
      * must not block, do I/O or allocate without bound. Returns the number of objects that did
      * not fit (overflow). */
-    guint (*fill_event)(AppCtx *app_ctx, NvDsFrameMeta *frame_meta, PerceptraFrameEvent *ev);
+    guint (*fill_event)(AppCtx *app_ctx, NvDsFrameMeta *frame_meta, RTVisionFrameEvent *ev);
     void (*shutdown)(void);
-} PerceptraTaskHandler;
+} RTVisionTaskHandler;
 
 /* NULL for an unknown task name. */
-const PerceptraTaskHandler *perceptra_task_get(const char *task);
+const RTVisionTaskHandler *rtvision_task_get(const char *task);
 
 /* detect handler (task_detect.c). */
-extern const PerceptraTaskHandler perceptra_task_detect;
+extern const RTVisionTaskHandler rtvision_task_detect;
 
 G_END_DECLS
 
-#endif /* PERCEPTRA_TASK_REGISTRY_H */
+#endif /* RTVISION_TASK_REGISTRY_H */

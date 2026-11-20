@@ -51,12 +51,12 @@ static void cached_free(gpointer p) {
     g_free(c);
 }
 
-void perceptra_embeddings_init(gboolean on, guint store_age_frames) {
+void rtvision_embeddings_init(gboolean on, guint store_age_frames) {
     enabled = on;
     store_age = store_age_frames;
 }
 
-gboolean perceptra_embeddings_enabled(void) {
+gboolean rtvision_embeddings_enabled(void) {
     return enabled;
 }
 
@@ -78,7 +78,7 @@ static gboolean evict_old(gpointer key, gpointer value, gpointer user_data) {
     return ((CachedFeature *)value)->frame_num < now - (gint)store_age;
 }
 
-void perceptra_embeddings_observe_frame(NvDsFrameMeta *fm) {
+void rtvision_embeddings_observe_frame(NvDsFrameMeta *fm) {
     if (!enabled || store_age == 0 || fm->source_id >= MAX_SOURCE_BINS)
         return;
     GHashTable **t = &cache[fm->source_id];
@@ -96,11 +96,11 @@ void perceptra_embeddings_observe_frame(NvDsFrameMeta *fm) {
             continue;
         CachedFeature *c = g_hash_table_lookup(*t, &om->object_id);
         if (c == NULL) {
-            if (g_hash_table_size(*t) >= PERCEPTRA_EMB_MAX_TRACKS_PER_STREAM) {
+            if (g_hash_table_size(*t) >= RTVISION_EMB_MAX_TRACKS_PER_STREAM) {
                 if (!cap_warned) {
                     cap_warned = TRUE;
                     PLOG_WARN("embeddings", "event=cache_full source_id=%u cap=%d", fm->source_id,
-                              PERCEPTRA_EMB_MAX_TRACKS_PER_STREAM);
+                              RTVISION_EMB_MAX_TRACKS_PER_STREAM);
                 }
                 continue;
             }
@@ -119,14 +119,14 @@ void perceptra_embeddings_observe_frame(NvDsFrameMeta *fm) {
         g_hash_table_foreach_remove(*t, evict_old, GINT_TO_POINTER(fm->frame_num));
 }
 
-static PerceptraEmbedding *copy_embedding(const gfloat *data, guint dim) {
-    PerceptraEmbedding *e = g_new(PerceptraEmbedding, 1);
+static RTVisionEmbedding *copy_embedding(const gfloat *data, guint dim) {
+    RTVisionEmbedding *e = g_new(RTVisionEmbedding, 1);
     e->dim = dim;
     e->data = g_memdup2(data, (gsize)dim * sizeof(gfloat));
     return e;
 }
 
-PerceptraEmbedding *perceptra_embeddings_for_object(NvDsFrameMeta *fm, NvDsObjectMeta *om) {
+RTVisionEmbedding *rtvision_embeddings_for_object(NvDsFrameMeta *fm, NvDsObjectMeta *om) {
     if (!enabled || om->object_id == UNTRACKED_OBJECT_ID)
         return NULL;
     const NvDsObjReid *r = find_reid(om);
@@ -140,7 +140,7 @@ PerceptraEmbedding *perceptra_embeddings_for_object(NvDsFrameMeta *fm, NvDsObjec
     return NULL;
 }
 
-void perceptra_embeddings_shutdown(void) {
+void rtvision_embeddings_shutdown(void) {
     for (guint i = 0; i < MAX_SOURCE_BINS; i++)
         g_clear_pointer(&cache[i], g_hash_table_destroy);
 }

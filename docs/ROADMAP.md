@@ -7,17 +7,17 @@ v1 implements `task: detect`. The following are **designed in but not implemente
 
 | Seam | Where | v1 behaviour |
 |---|---|---|
-| Task registry | `src/app/task_registry.c` — `const PerceptraTaskHandler *perceptra_task_get(const char *task)` | `detect` returns the handler; `segment`/`pose` return a stub whose `init()` fails with "task not supported in this version" |
-| Object struct reserved fields | `PerceptraObject.mask`, `PerceptraObject.attributes` (NULL in v1) | never serialized |
+| Task registry | `src/app/task_registry.c` — `const RTVisionTaskHandler *rtvision_task_get(const char *task)` | `detect` returns the handler; `segment`/`pose` return a stub whose `init()` fails with "task not supported in this version" |
+| Object struct reserved fields | `RTVisionObject.mask`, `RTVisionObject.attributes` (NULL in v1) | never serialized |
 | Schema reserved fields | `objects[].mask`, `objects[].attributes` | not emitted |
-| Model task enum | `model.schema.json` accepts `segment`, `pose` | `perceptra-run` rejects them with a clear message |
+| Model task enum | `model.schema.json` accepts `segment`, `pose` | `rtvision-run` rejects them with a clear message |
 | Publisher backend vtable | `publisher.h` | kafka, stdout, file |
 | Parser family table | `ds_adapter.cpp` | 4 detection families |
 
 ## Planned features
 
 ### Instance segmentation (`task: segment`)
-- DeepStream: `nvinfer` `network-type=3`, `output-instance-mask=1`, `parse-bbox-instance-mask-func-name=NvDsInferParsePerceptra_<Family>Seg`; masks arrive in `NvDsObjectMeta.mask_params`.
+- DeepStream: `nvinfer` `network-type=3`, `output-instance-mask=1`, `parse-bbox-instance-mask-func-name=NvDsInferParseRTVision_<Family>Seg`; masks arrive in `NvDsObjectMeta.mask_params`.
 - Families: `yolo_seg_e2e` (YOLO26-seg: detections + mask coefficients + prototypes), `maskrcnn_like`.
 - Event: `objects[].mask = {"format":"polygon","points":[[x,y],...]}` (default, compact) or `{"format":"rle","size":[h,w],"counts":"..."}` (COCO RLE). Configurable `publish.mask_format`, plus `publish.mask_simplify_px`.
 - Cost: mask encoding happens on the publisher thread; the probe copies only the mask buffer pointer and dims (copying on GPU→CPU only for sampled frames).

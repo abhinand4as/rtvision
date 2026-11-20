@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 Abhinand A S
-"""Example consumer: per-camera person count from Perceptra events.
+"""Example consumer: per-camera person count from RTVision events.
 
-Reads `perceptra.detection.v1` events as JSON Lines on stdin (standard library only) and prints a
+Reads `rtvision.detection.v1` events as JSON Lines on stdin (standard library only) and prints a
 line whenever a camera's smoothed count changes:
 
     docker compose -f deploy/compose/compose.yaml exec -T kafka \\
@@ -13,7 +13,7 @@ line whenever a camera's smoothed count changes:
 
 Detections flicker from frame to frame, so the count is the upper median of the last --window
 events of that camera (a missed detection lowers a count far more often than a false positive
-raises it). Perceptra does not publish frames without objects by default
+raises it). RTVision does not publish frames without objects by default
 (publish.include_empty_frames: false), so a camera with no event for --stale-s seconds is
 reported as 0.
 

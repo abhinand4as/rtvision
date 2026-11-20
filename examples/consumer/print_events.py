@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 Abhinand A S
-"""Example consumer: print Perceptra events as one readable line each.
+"""Example consumer: print RTVision events as one readable line each.
 
-Reads `perceptra.detection.v1` events as JSON Lines on stdin (standard library only):
+Reads `rtvision.detection.v1` events as JSON Lines on stdin (standard library only):
 
     docker compose -f deploy/compose/compose.yaml exec -T kafka \\
         /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 \\
-        --topic perceptra.rfdetr-s-coco | python3 examples/consumer/print_events.py
+        --topic rtvision.rfdetr-s-coco | python3 examples/consumer/print_events.py
 
     2026-11-20T14:10:41.487Z it-cam-0 frame=30 objects=11 car=6 person=3 backpack=1 bus=1
 

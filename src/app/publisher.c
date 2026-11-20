@@ -11,16 +11,16 @@
 
 #define WORKER_IDLE_WAIT_US (100 * G_TIME_SPAN_MILLISECOND)
 
-struct PerceptraPublisher {
-    PerceptraBackend *backend;
-    PerceptraEventContext ctx;
+struct RTVisionPublisher {
+    RTVisionBackend *backend;
+    RTVisionEventContext ctx;
     guint max_events;
-    PerceptraDropPolicy policy;
+    RTVisionDropPolicy policy;
     gboolean key_by_sensor;
 
     GMutex lock;
     GCond cond;
-    GQueue queue;      /* PerceptraFrameEvent* */
+    GQueue queue;      /* RTVisionFrameEvent* */
     gboolean stopping; /* no new events; worker drains until deadline */
     gint64 deadline_us;
     gboolean shut_down;
@@ -37,12 +37,12 @@ static guint64 get(const guint64 *counter) {
     return __atomic_load_n(counter, __ATOMIC_RELAXED);
 }
 
-void perceptra_publisher_report_delivery(PerceptraPublisher *pub, gboolean ok) {
+void rtvision_publisher_report_delivery(RTVisionPublisher *pub, gboolean ok) {
     add(ok ? &pub->published : &pub->failed, 1);
 }
 
 static gpointer worker_main(gpointer data) {
-    PerceptraPublisher *pub = data;
+    RTVisionPublisher *pub = data;
     GString *json = g_string_sized_new(4096);
     GError *error = NULL;
     guint64 failures_logged = 0;
@@ -62,9 +62,9 @@ static gpointer worker_main(gpointer data) {
             (g_queue_is_empty(&pub->queue) || g_get_monotonic_time() >= pub->deadline_us)) {
             /* Deadline reached: whatever is left is dropped. */
             guint left = g_queue_get_length(&pub->queue);
-            PerceptraFrameEvent *ev;
+            RTVisionFrameEvent *ev;
             while ((ev = g_queue_pop_head(&pub->queue)) != NULL)
-                perceptra_event_free(ev);
+                rtvision_event_free(ev);
             g_mutex_unlock(&pub->lock);
             if (left > 0) {
                 add(&pub->dropped, left);
@@ -72,10 +72,10 @@ static gpointer worker_main(gpointer data) {
             }
             break;
         }
-        PerceptraFrameEvent *ev = g_queue_pop_head(&pub->queue);
+        RTVisionFrameEvent *ev = g_queue_pop_head(&pub->queue);
         g_mutex_unlock(&pub->lock);
 
-        perceptra_event_to_json(ev, &pub->ctx, json);
+        rtvision_event_to_json(ev, &pub->ctx, json);
         const char *key = pub->key_by_sensor ? ev->sensor_id : NULL;
         gboolean ok = pub->backend->ops->send(pub->backend, key, json->str, json->len, &error);
         if (!ok) {
@@ -89,7 +89,7 @@ static gpointer worker_main(gpointer data) {
         } else if (!pub->backend->ops->async_delivery) {
             add(&pub->published, 1);
         }
-        perceptra_event_free(ev);
+        rtvision_event_free(ev);
         if (pub->backend->ops->poll)
             pub->backend->ops->poll(pub->backend);
     }
@@ -97,10 +97,10 @@ static gpointer worker_main(gpointer data) {
     return NULL;
 }
 
-PerceptraPublisher *perceptra_publisher_new(PerceptraBackend *backend,
-                                            const PerceptraEventContext *ctx, guint max_events,
-                                            PerceptraDropPolicy policy, gboolean key_by_sensor) {
-    PerceptraPublisher *pub = g_new0(PerceptraPublisher, 1);
+RTVisionPublisher *rtvision_publisher_new(RTVisionBackend *backend, const RTVisionEventContext *ctx,
+                                          guint max_events, RTVisionDropPolicy policy,
+                                          gboolean key_by_sensor) {
+    RTVisionPublisher *pub = g_new0(RTVisionPublisher, 1);
     pub->backend = backend;
     backend->publisher = pub;
     pub->ctx = *ctx;
@@ -110,16 +110,16 @@ PerceptraPublisher *perceptra_publisher_new(PerceptraBackend *backend,
     g_mutex_init(&pub->lock);
     g_cond_init(&pub->cond);
     g_queue_init(&pub->queue);
-    pub->worker = g_thread_new("perceptra-publisher", worker_main, pub);
+    pub->worker = g_thread_new("rtvision-publisher", worker_main, pub);
     PLOG_INFO("publisher", "event=started backend=%s max_events=%u on_full=%s key=%s",
               backend->ops->name, pub->max_events,
-              policy == PERCEPTRA_DROP_OLDEST ? "drop_oldest" : "drop_newest",
+              policy == RTVISION_DROP_OLDEST ? "drop_oldest" : "drop_newest",
               key_by_sensor ? "sensor_id" : "none");
     return pub;
 }
 
-gboolean perceptra_publisher_enqueue(PerceptraPublisher *pub, PerceptraFrameEvent *ev) {
-    PerceptraFrameEvent *victim = NULL;
+gboolean rtvision_publisher_enqueue(RTVisionPublisher *pub, RTVisionFrameEvent *ev) {
+    RTVisionFrameEvent *victim = NULL;
     gboolean accepted = TRUE;
 
     g_mutex_lock(&pub->lock);
@@ -127,7 +127,7 @@ gboolean perceptra_publisher_enqueue(PerceptraPublisher *pub, PerceptraFrameEven
         accepted = FALSE;
         victim = ev;
     } else if (g_queue_get_length(&pub->queue) >= pub->max_events) {
-        if (pub->policy == PERCEPTRA_DROP_OLDEST) {
+        if (pub->policy == RTVISION_DROP_OLDEST) {
             victim = g_queue_pop_head(&pub->queue);
             g_queue_push_tail(&pub->queue, ev);
         } else {
@@ -145,12 +145,12 @@ gboolean perceptra_publisher_enqueue(PerceptraPublisher *pub, PerceptraFrameEven
         add(&pub->enqueued, 1);
     if (victim) {
         add(&pub->dropped, 1);
-        perceptra_event_free(victim); /* outside the lock */
+        rtvision_event_free(victim); /* outside the lock */
     }
     return accepted;
 }
 
-gboolean perceptra_publisher_shutdown(PerceptraPublisher *pub, guint timeout_ms) {
+gboolean rtvision_publisher_shutdown(RTVisionPublisher *pub, guint timeout_ms) {
     if (pub->shut_down)
         return TRUE;
     gint64 start = g_get_monotonic_time();
@@ -171,8 +171,8 @@ gboolean perceptra_publisher_shutdown(PerceptraPublisher *pub, guint timeout_ms)
     gboolean flushed = pub->backend->ops->flush(pub->backend, (gint)MAX(left_ms, 0));
     pub->shut_down = TRUE;
 
-    PerceptraPublisherStats s;
-    perceptra_publisher_get_stats(pub, &s);
+    RTVisionPublisherStats s;
+    rtvision_publisher_get_stats(pub, &s);
     PLOG_INFO("publisher",
               "event=stopped flushed=%d enqueued=%" G_GUINT64_FORMAT " published=%" G_GUINT64_FORMAT
               " dropped=%" G_GUINT64_FORMAT " failed=%" G_GUINT64_FORMAT
@@ -183,11 +183,11 @@ gboolean perceptra_publisher_shutdown(PerceptraPublisher *pub, guint timeout_ms)
            s.failed == 0;
 }
 
-void perceptra_publisher_free(PerceptraPublisher *pub) {
+void rtvision_publisher_free(RTVisionPublisher *pub) {
     if (pub == NULL)
         return;
     if (!pub->shut_down)
-        perceptra_publisher_shutdown(pub, 0);
+        rtvision_publisher_shutdown(pub, 0);
     pub->backend->ops->destroy(pub->backend);
     g_queue_clear(&pub->queue);
     g_mutex_clear(&pub->lock);
@@ -195,7 +195,7 @@ void perceptra_publisher_free(PerceptraPublisher *pub) {
     g_free(pub);
 }
 
-void perceptra_publisher_get_stats(PerceptraPublisher *pub, PerceptraPublisherStats *out) {
+void rtvision_publisher_get_stats(RTVisionPublisher *pub, RTVisionPublisherStats *out) {
     out->enqueued = get(&pub->enqueued);
     out->published = get(&pub->published);
     out->dropped = get(&pub->dropped);
