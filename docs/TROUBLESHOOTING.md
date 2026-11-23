@@ -103,6 +103,21 @@ that object an id in that frame.
 and RTSP streams before their first RTCP sender report have no NTP time; RTVision falls back to
 the system clock for those events.
 
+## Web UI and replicator
+
+**Live page: "Live video … Retrying".** RTVision's annotated output is off or no camera is
+streaming. Start with both compose files (`compose.yaml` and `compose.ui.yaml`).
+
+**"host not allowed".** The page was opened with a host name that is not `localhost` or an IP
+address: set `RTVISION_UI_ALLOWED_HOSTS`.
+
+**Removing a camera asks for its URL.** It was added outside the UI; DeepStream needs the exact URL.
+
+**Upload refused: unsupported codec.** Only H.264 and H.265 are served. Convert the video first.
+
+**Cameras show 0 FPS after the replicator was stopped or reconfigured.** They reconnect by
+themselves; allow up to about 30 s (`sources.rtsp_reconnect_interval_s`).
+
 ## Shutdown
 
 **`docker compose stop` takes about 9 seconds.** Expected: DeepStream 9.1's stream muxer can hang

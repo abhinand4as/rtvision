@@ -4,6 +4,13 @@
 All notable changes are documented here (format: Keep a Changelog; versioning: SemVer).
 
 ## [Unreleased]
+### Added
+- RTSP stream replicator: `rtvision-replicator` / `tools/replicator/replicator.sh` serves video files
+  as looping, real-time RTSP cameras without re-encoding; YAML configuration, HTTP control API.
+- Web UI (`rtvision-ui`, `deploy/compose/compose.ui.yaml`): live annotated streams, performance and
+  hardware, replicator management (upload, streams, start/stop).
+- Ops server `GET /events/latest`; `outputs.tiled` and `outputs.rtsp.bitrate`; box labels and track
+  ids in annotated outputs; `tests/integration/run_ui.sh`.
 
 ## [0.1.0] - 2026-11-20
 ### Added

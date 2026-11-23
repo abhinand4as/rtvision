@@ -38,7 +38,7 @@
 
 Each script prints `PASS:`/`FAIL:` and exits non-zero on failure. Environment knobs live in `deploy/compose/.env.example` (`MIN_EVENTS`, `STARTUP_TIMEOUT_S`, `CONSUME_TIMEOUT_S`, `RTVISION_IMAGE`).
 
-Running it:
+Running it (`tests/integration/run_ui.sh` does the same for the web UI and the replicator: upload, 4 looping streams, live video, hardware, removal):
 
 ```bash
 tools/export/rfdetr/export.sh                         # once: models/examples/rfdetr-s-coco/rfdetr-small.onnx

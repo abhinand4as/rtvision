@@ -14,6 +14,8 @@ microservice (Apache-2.0).
 - **Streams at runtime** over REST (`POST /api/v1/stream/add`), batched on one GPU.
 - **Tracking** (NvDCF, NvSORT, IOU) with stable track ids, optional ReID embeddings.
 - **Documented event schema** `rtvision.detection.v1`, JSON Schema in `schemas/`.
+- **Web UI** with live annotated streams, performance and hardware figures, and an **RTSP stream
+  replicator** that turns your videos into test cameras.
 - **Operations:** `/live`, `/ready`, `/startup`, Prometheus `/metrics`, model hot swap without
   dropping streams, graceful shutdown.
 
@@ -75,6 +77,23 @@ The sample video is about 50 seconds long and does not loop. At its end DeepStre
 stream by itself, so the remove in step 6 then answers `STREAM_REMOVE_FAIL, No record found`,
 which is harmless. RTSP cameras stay until you remove them.
 
+## Web UI and test cameras
+
+```bash
+docker compose -f deploy/compose/compose.yaml -f deploy/compose/compose.ui.yaml up -d --build
+```
+
+Open <http://localhost:8080/>. On the *Replicator* page upload a video, choose *Fill from all
+videos*, *Save and apply* and *Add all to RTVision*; the *Live* page then shows the cameras with
+their detections. The replicator also works alone in a terminal:
+
+```bash
+tools/replicator/replicator.sh my-video.mp4 --streams 4     # rtsp://localhost:8554/cam-1 … cam-4
+```
+
+See [`docs/UI.md`](docs/UI.md) and [`docs/REPLICATOR.md`](docs/REPLICATOR.md). Stop everything with
+`docker compose -f deploy/compose/compose.yaml -f deploy/compose/compose.ui.yaml down`.
+
 ## Configuration
 
 | What | Where |
@@ -92,6 +111,8 @@ The REST API (9000) and ops server (9464) do not authenticate. Compose publishes
 | Document | Content |
 |---|---|
 | [`docs/MODELS.md`](docs/MODELS.md) | **Bring your own model**: export, `model.yaml`, verification |
+| [`docs/UI.md`](docs/UI.md) | Web UI: pages, settings, security |
+| [`docs/REPLICATOR.md`](docs/REPLICATOR.md) | RTSP stream replicator: terminal and web |
 | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Common problems, exit codes, log lines |
 | [`docs/API.md`](docs/API.md) | Stream REST API and ops endpoints |
 | [`docs/EVENT_SCHEMA.md`](docs/EVENT_SCHEMA.md) | Kafka/JSON event format |
