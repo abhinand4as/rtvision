@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0
+# Example for `rtvision-replicator --config` / tools/replicator/replicator.sh --config.
+# Videos are looked up next to this file (or in --videos-dir). H.264/H.265 only.
+rtsp_port: 8554
+public_host: null            # host name shown in the URLs (default: this machine)
+streams:
+  - name: entrance           # rtsp://<host>:8554/entrance
+    video: street.mp4
+  - name: parking
+    video: street.mp4
+    start_offset_s: 12       # start elsewhere in the video (snaps to a keyframe)
+  - name: lobby
+    video: lobby.mp4
+    loop: true               # false: end after one pass
+    enabled: true

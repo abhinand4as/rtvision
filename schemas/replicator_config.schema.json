@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rtvision.dev/schemas/replicator_config.schema.json",
+  "$comment": "SPDX-License-Identifier: Apache-2.0",
+  "title": "RTSP stream replicator configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "rtsp_port": { "type": "integer", "minimum": 1, "maximum": 65535, "default": 8554 },
+    "public_host": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Za-z0-9._-]{1,253}$",
+      "default": null,
+      "description": "Host name shown in stream URLs (default: the container/host name)."
+    },
+    "streams": {
+      "type": "array",
+      "maxItems": 64,
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "video"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,62}$",
+            "description": "RTSP path and suggested camera id: rtsp://host:port/<name>"
+          },
+          "video": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._ ()+-]{0,127}$",
+            "description": "File name inside the videos directory."
+          },
+          "loop": { "type": "boolean", "default": true },
+          "start_offset_s": { "type": "number", "minimum": 0, "maximum": 86400, "default": 0 },
+          "enabled": { "type": "boolean", "default": true }
+        }
+      }
+    }
+  }
+}
