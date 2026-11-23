@@ -4,12 +4,14 @@
 | Layer | Runs where | Tooling | Gate |
 |---|---|---|---|
 | Parser core unit tests | CI (no GPU) | `make -C src/parsers test-core` | every PR |
-| Python tools (schemas, generator, ONNX inspect) | CI | `pytest -q tests/python` | every PR |
+| Python tools (schemas, generator, ONNX inspect, replicator, web UI, examples) | CI | `pytest -q tests/python` | every PR |
 | Serializer golden + publisher queue tests | CI (GLib only) | `make -C src/app test` (`test-serialize`, `test-publisher`) + pytest schema check | every PR |
-| Static checks | CI | ruff, clang-format, SPDX check, forbidden-files check | every PR |
+| Static checks | CI | ruff, clang-format, shellcheck, compose config, SPDX check, forbidden-files check | every PR |
 | Integration (compose) | GPU host | `tests/integration/run_all.sh` | before release |
-| Model accuracy smoke | GPU host | `tests/integration/accuracy_smoke.py` (optional, user-supplied clip + golden JSON) | when adding a model |
-| Soak | GPU host | 1 h, 4 streams: RSS growth < 5 %, no dropped events at default rate | before release |
+| Web UI + replicator | GPU host | `tests/integration/run_ui.sh` (own compose project, ports must be free) | before release |
+| Demo | GPU host | `examples/demo/run_demo.sh` | when the UI or the replicator changes |
+| Model accuracy smoke | GPU host | not scripted: compare with the model's own inference (docs/MODELS.md step 7) | when adding a model |
+| Soak | GPU host | 1 h, 4 streams: RSS growth < 5 %, no dropped events at default rate. **Not run yet**; the replicator's looping streams make it possible | before release |
 
 ## Unit tests (no GPU)
 

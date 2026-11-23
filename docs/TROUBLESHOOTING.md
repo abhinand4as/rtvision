@@ -4,7 +4,7 @@
 Start with the logs and the ops endpoints:
 
 ```bash
-docker compose -f deploy/compose/compose.yaml logs --tail 50 rtvision
+docker compose -f deploy/compose/compose.yaml logs --tail 50 rtvision      # demo: docker compose -p rtvision-demo logs …
 curl -s localhost:9464/startup; curl -s localhost:9464/ready; curl -s localhost:9464/metrics | grep '^rtvision_'
 ```
 

@@ -16,13 +16,22 @@ Open <http://localhost:8080/>.
 The overlay adds two containers from the same image (`ui`, `replicator`) and turns on RTVision's
 annotated output (`outputs.rtsp`, tiled 1920x1080).
 
+![Live page](images/live.png)
+
+![Performance page](images/performance.png)
+
+![Replicator page](images/replicator.png)
+
+Video in the first picture: Intel sample-videos, CC-BY-4.0 ([details](images/README.md)). To
+reproduce: [`examples/demo`](../examples/demo/README.md).
+
 ## How it works
 
 - Boxes are drawn by DeepStream. RTVision serves one tiled, annotated video (RTSP); the UI server
   decodes it on the GPU and sends JPEG frames (15 FPS); the browser cuts out each camera's tile.
   The decoder runs only while someone watches.
 - Figures come from the ops server: `/metrics`, `/info` and `/events/latest`. "In view" is the last
-  event of each camera if it is younger than 3 s.
+  event of each camera, unless it is older than about one and a half publish intervals.
 - Hardware figures come from `nvidia-smi` and `/proc` of the host running the UI container.
 - Plain HTML/CSS/JavaScript and the Python standard library: no build step, no downloads at run
   time, works offline.

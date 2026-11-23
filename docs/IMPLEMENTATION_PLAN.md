@@ -34,7 +34,7 @@ rtvision/
 │   │   ├── ota.c/.h              model hot-swap watcher (inotify)    (derived: RT-CV)
 │   │   ├── perf.c/.h             perf callback → metrics             (derived: RT-CV perf_cb)
 │   │   ├── metrics.c/.h          counters/gauges registry, Prometheus text render
-│   │   ├── ops_server.c/.h       libsoup-3.0 HTTP: /live /ready /startup /metrics
+│   │   ├── ops_server.c/.h       libsoup-3.0 HTTP: /live /ready /startup /metrics /info /events/latest
 │   │   ├── log.c/.h              levelled key=value logging
 │   │   └── Makefile
 │   └── parsers/
@@ -50,18 +50,22 @@ rtvision/
 │   ├── gen_configs.py            yaml → DeepStream INI + app.ini + parser.ini
 │   ├── onnx_inspect.py           output shapes / names → family check
 │   ├── schemas.py                JSON Schema validation helpers
+│   ├── replicator/               `rtvision-replicator`: looping RTSP cameras from video files
+│   ├── ui/                       `rtvision-ui`: web UI (server, static pages)
 │   └── templates/                ds_main.ini.j2  pgie.ini.j2  app.ini.j2  parser.ini.j2
 ├── tools/export/                 OPTIONAL, separately installed exporters (see LICENSING)
 │   └── rfdetr/README.md + export.sh + export_rfdetr.py   (own venv, never a dependency of the service)
-├── config/rtvision.example.yaml
+├── tools/replicator/replicator.sh   replicator in a terminal
+├── config/rtvision.example.yaml  config/replicator.example.yaml
 ├── models/examples/              model.yaml + labels only (no weights)
 │   ├── rfdetr-s-coco/            RF-DETR Small (Apache-2.0): compose + integration-test default
 │   ├── rfdetr-s-people/          same network, `person` only
 │   ├── trafficcamnet-sample/     `builtin` escape hatch (DeepStream sample model in the container)
 │   └── rtdetr-r18-coco/
 ├── docker/Dockerfile  docker/entrypoint.sh
-├── deploy/compose/compose.yaml  deploy/compose/.env.example
+├── deploy/compose/compose.yaml  compose.ui.yaml  .env.example
 ├── examples/consumer/print_events.py   examples/consumer/occupancy.py
+├── examples/demo/                run_demo.sh + README.md: four cameras from one online video
 ├── tests/
 │   ├── python/                   pytest: schemas, gen_configs, onnx_inspect, serializer golden files
 │   ├── golden/                   expected JSON events, generated configs
@@ -167,6 +171,14 @@ Each milestone ends with its **acceptance** commands passing. Mark items `[x]` w
 - `examples/consumer/print_events.py` and `occupancy.py` (stdin JSON Lines, standard library only); `occupancy.py` verified on live Kafka output of `rfdetr-s-people` (smoothed counts, 0 after the stream ended). Unit tests in `tests/python/test_examples.py`.
 - `tools/ci/third_party_report.py`: report from the built image; `--check` passes.
 - Owner decisions settled on 2026-11-20 (`docs/LICENSING.md` §8): owner Abhinand A S, MPL-2.0 for the host-only export tooling, project renamed from the working name `perceptra` to **RTVision** (deviation #32).
+
+---
+
+## After v0.1.0
+
+- [x] RTSP stream replicator (`docs/REPLICATOR.md`), web UI (`docs/UI.md`), demo (`examples/demo`). Verified 2026-11-23 on the GPU: `tests/integration/run_ui.sh` (upload, 4 looping streams at >= 25 FPS with detections, live video, hardware readings, removal), headless-browser checks of all pages in light, dark and phone layouts, demo at 4 × 60 FPS.
+- [ ] One-hour soak test (`docs/TESTING.md`).
+- [ ] ReID embeddings on the GPU (PENDING-REID-MODEL, M5).
 
 ---
 

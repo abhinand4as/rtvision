@@ -48,4 +48,5 @@ python3 tools/ci/check_forbidden.py
 ruff check . && ruff format --check .
 git ls-files '*.c' '*.h' '*.cpp' '*.hpp' | xargs -r clang-format --dry-run --Werror
 pytest -q
+shellcheck -x $(git ls-files '*.sh')
 ```

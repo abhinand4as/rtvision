@@ -17,6 +17,9 @@ Only the latest release receives security fixes until v1.0.
 - The stream REST API (port 9000, DeepStream `nvmultiurisrcbin`) and the ops API (port 9464)
   are **unauthenticated**. Bind them to trusted networks or put an authenticating gateway in
   front. See ARCHITECTURE.md §11.
+- The web UI (port 8080) and the replicator's control API are unauthenticated too: anyone who can
+  open the UI can see the cameras and change them. Compose publishes everything on `127.0.0.1`
+  only; put an authenticating reverse proxy in front before changing that (docs/UI.md).
 - Kafka credentials are passed via `publish.kafka.properties` / environment; never commit them.
 - Container images include NVIDIA components; track NVIDIA security bulletins for DeepStream,
   TensorRT and CUDA.

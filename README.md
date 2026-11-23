@@ -8,6 +8,13 @@ tracked across frames, and one JSON event per sampled frame is published to Kafk
 It is built on NVIDIA DeepStream 9.1, with an architecture derived from NVIDIA's RT-CV
 microservice (Apache-2.0).
 
+![RTVision live page: four cameras with tracked people](docs/images/live.png)
+
+*Live page of the [demo](examples/demo/README.md): four RTSP cameras at 60 FPS each on a laptop GPU.
+Video: [Intel sample-videos](https://github.com/intel-iot-devkit/sample-videos),
+[CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/), scaled and annotated
+([details](docs/images/README.md)).*
+
 - **Any ONNX detector** described by a small `model.yaml`: YOLO-style heads, DETR-style heads
   (RT-DETR, RF-DETR, D-FINE), TensorRT EfficientNMS outputs. The default is **RF-DETR Small
   (Apache-2.0)**.
@@ -30,7 +37,22 @@ microservice (Apache-2.0).
 
 Check the GPU setup with `docker run --rm --gpus all ubuntu nvidia-smi`.
 
+## Demo
+
+Four replicated cameras with people detection and the web UI, from one openly licensed online video:
+
+```bash
+tools/export/rfdetr/export.sh      # once: export the detector to ONNX
+examples/demo/run_demo.sh          # then open http://localhost:8080/
+examples/demo/run_demo.sh stop
+```
+
+Step-by-step instructions, expected results and troubleshooting:
+[`examples/demo/README.md`](examples/demo/README.md).
+
 ## Quick start
+
+The service on its own, with Kafka and one sample stream.
 
 All commands run from the repository root.
 
@@ -110,6 +132,7 @@ The REST API (9000) and ops server (9464) do not authenticate. Compose publishes
 
 | Document | Content |
 |---|---|
+| [`examples/demo/README.md`](examples/demo/README.md) | **Demo**: reproduce the picture above |
 | [`docs/MODELS.md`](docs/MODELS.md) | **Bring your own model**: export, `model.yaml`, verification |
 | [`docs/UI.md`](docs/UI.md) | Web UI: pages, settings, security |
 | [`docs/REPLICATOR.md`](docs/REPLICATOR.md) | RTSP stream replicator: terminal and web |
@@ -132,6 +155,7 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 make -C src/parsers test-core            # parser core (no GPU, no DeepStream)
 make -C src/app test                     # serializer, publisher, timestamps, metrics (GLib only)
 tests/integration/run_all.sh             # full stack on a GPU host (docs/TESTING.md)
+tests/integration/run_ui.sh              # web UI and replicator on a GPU host
 ```
 
 Contributions: see [`CONTRIBUTING.md`](CONTRIBUTING.md) (DCO sign-off, Conventional Commits). The
@@ -152,5 +176,7 @@ project was implemented milestone by milestone from the specification in this re
 - **Video codecs:** H.264/H.265 are decoded by the GPU's hardware decoder through DeepStream; no
   software codec packages are added. Products that decode these formats may need patent licences
   (e.g. from the relevant patent pools); check this for your use.
+- **Pictures and demo video:** `docs/images/README.md`; the demo video (CC-BY-4.0) is downloaded,
+  never committed.
 - Third-party components and their licences: `THIRD_PARTY_NOTICES.md` (generated from the built
   image by `tools/ci/third_party_report.py`).

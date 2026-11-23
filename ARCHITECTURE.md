@@ -8,7 +8,7 @@
 
 The architecture is derived from NVIDIA's RT-CV microservice (`services/rtvi/rt-cv` in `NVIDIA-AI-Blueprints/video-search-and-summarization`, Apache-2.0). RTVision keeps RT-CV's proven runtime shape and replaces the model-specific and closed-schema parts with generic, configurable and open components.
 
-> Status: specification for implementation. Build order and acceptance criteria are in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md). Rules for the implementing agent are in [CLAUDE.md](CLAUDE.md).
+> Status: implemented (v0.1.0). Where the implementation differs from this document's original text, [docs/DEVIATIONS.md](docs/DEVIATIONS.md) says so. The build history and acceptance results are in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
 
 ---
 
@@ -25,7 +25,7 @@ The architecture is derived from NVIDIA's RT-CV microservice (`services/rtvi/rt-
 
 ### Non-goals (v1)
 - Request/response single-image inference API.
-- Video storage, recording or a VMS UI.
+- Video storage, recording or a VMS. (The optional web UI shows live streams and figures; it is not a VMS.)
 - Non-NVIDIA hardware (an open-source backend is a roadmap item).
 - Segmentation, pose or 3D in v1. Interfaces are reserved, but those tasks are not implemented.
 
@@ -44,7 +44,14 @@ flowchart LR
     K --> C1[Counting / occupancy]
     K --> C2[Alerts / rules]
     K --> C3[Storage / search]
+    U[Browser] -- HTTP :8080 --> UI[Web UI<br/>optional]
+    UI -- annotated RTSP, metrics, REST --> P
+    UI -- uploads, streams --> RP[RTSP replicator<br/>optional]
+    RP -- test cameras, RTSP :8554 --> P
 ```
+
+The web UI and the replicator are separate, optional containers (`deploy/compose/compose.ui.yaml`).
+RTVision does not depend on them.
 
 ---
 
@@ -62,7 +69,7 @@ flowchart TB
     direction TB
     subgraph CTRL[Control plane]
       RESTSRV[Stream REST server :9000<br/>nvmultiurisrcbin built-in]
-      OPS[Ops HTTP server :9464<br/>/live /ready /startup /metrics<br/>libsoup]
+      OPS[Ops HTTP server :9464<br/>/live /ready /startup /metrics<br/>/info /events/latest · libsoup]
       CFG[rtvision-run entrypoint<br/>gen_configs.py: rtvision.yaml + model.yaml<br/>→ DeepStream + app configs]
     end
     subgraph PIPE[GStreamer / DeepStream pipeline]
@@ -71,7 +78,7 @@ flowchart TB
       MUX --> PGIE[nvinfer + TensorRT<br/>detector engine]
       PGIE --> TRK[nvtracker<br/>NvDCF / NvSORT / IOU]
       TRK --> PROBE[RTVision probe<br/>task dispatch → event builder]
-      PROBE --> TEE[tee → fakesink / OSD display / file]
+      PROBE --> TEE[tee → fakesink / OSD display / file / annotated RTSP]
     end
     PARSER[librtvision_parsers.so<br/>output-family decoders] -.-> PGIE
     PROBE --> Q[Bounded event queue]
@@ -94,12 +101,14 @@ flowchart TB
 | `rtvision-run` (Python) | new | Entrypoint. Validates `rtvision.yaml` and `model.yaml` against JSON Schemas, inspects the ONNX output shapes, generates DeepStream configs and `app.ini`, sets env vars, then `exec`s the C binary. |
 | `rtvision` (C binary) | derived from RT-CV `metropolis_perception_app.c` | Pipeline lifecycle, CLI, signal handling, probe registration, perf callback, model hot-swap thread. |
 | Stream REST server | DeepStream `nvmultiurisrcbin` | `POST /api/v1/stream/add`, `POST /api/v1/stream/remove` (DeepStream's documented payload). |
-| Ops HTTP server | new (libsoup-3.0) | `/live`, `/ready`, `/startup`, `/metrics` (Prometheus text format). Runs independently of DeepStream's REST server. |
+| Ops HTTP server | new (libsoup-3.0) | `/live`, `/ready`, `/startup`, `/metrics` (Prometheus text format), `/info`, `/events/latest` (last event per camera). Runs independently of DeepStream's REST server. |
 | `nvinfer` + parser library | DeepStream + new `librtvision_parsers.so` | Pre-processing (resize, letterbox, normalise), TensorRT inference, and output decoding by family. |
 | `nvtracker` | DeepStream | Track IDs; optional ReID features. Profile chosen in config. |
 | Probe + event builder | new (ideas ported from RT-CV) | Per-frame sampling, bbox rescaling to source resolution, timestamps, embeddings, task dispatch, event structs. |
-| Serializer | new (json-glib) | Event struct → JSON matching `schemas/detection_event.v1.schema.json`. |
-| Publisher | new (librdkafka) | Bounded async queue, background thread, backends (`kafka`, `stdout`, `file`), drop policy, delivery metrics. |
+| Serializer | new (GLib only) | Event struct → JSON matching `schemas/detection_event.v1.schema.json`. |
+| Publisher | new (librdkafka) | Bounded async queue, background thread, backends (`kafka`, `stdout`, `file`), drop policy, delivery metrics. Remembers the last event per camera for `/events/latest`. |
+| Web UI `rtvision-ui` (Python, optional) | new (standard library; GStreamer for video) | Live annotated streams, performance and hardware figures, camera add/remove, replicator management. See [docs/UI.md](docs/UI.md). |
+| RTSP replicator `rtvision-replicator` (Python, optional) | new (GStreamer RTSP server) | Serves video files as looping, real-time RTSP cameras for tests and demos. See [docs/REPLICATOR.md](docs/REPLICATOR.md). |
 
 ### 3.2 What was kept, changed and dropped vs RT-CV
 
@@ -263,7 +272,8 @@ Format: RFC 3339 UTC with milliseconds, e.g. `2026-11-20T06:30:00.123Z`. The eve
 Health endpoints:
 - `/startup` → 200 once the configs are parsed and the pipeline reaches PLAYING.
 - `/ready` → 200 while PLAYING and the publisher is connected (or the backend is not Kafka).
-- `/live` → 200 if the main-loop heartbeat is younger than 10 s.
+- `/live` → 200 if the main-loop heartbeat is younger than 10 s (and while the service is still starting).
+- `/info` → service, model and limits; `/events/latest` → last event of every camera (used by the web UI).
 
 Logs are line-oriented `key=value`, with levels `error|warn|info|debug`.
 
@@ -274,8 +284,8 @@ Logs are line-oriented `key=value`, with levels `error|warn|info|debug`.
 - **Base image:** public `nvcr.io/nvidia/deepstream:9.1-samples-multiarch` (configurable `ARG`). Two-stage Dockerfile: the build stage compiles the C binary and the parser library against the DeepStream sources/headers in the image; the runtime stage holds the binaries, Python tools and runtime libs.
 - **Runs as non-root (uid 1000).**
 - **Volumes:** `/opt/rtvision/models` (ONNX, labels, `model.yaml`), `/opt/rtvision/engines` (TensorRT engine cache), `/opt/rtvision/config` (`rtvision.yaml`).
-- **Ports:** `9000` stream REST, `9464` ops/metrics.
-- **Compose stack** for development and integration tests: `kafka` (apache/kafka, KRaft) + `rtvision`.
+- **Ports:** `9000` stream REST, `9464` ops/metrics. With the UI overlay also `8080` (web UI) and `8554` (replicated RTSP streams). Compose binds all of them to `127.0.0.1` by default.
+- **Compose stack** for development and integration tests: `kafka` (apache/kafka, KRaft) + `rtvision`. The overlay `compose.ui.yaml` adds `ui` and `replicator`, which run from the same image with other commands.
 - **Hardware:** NVIDIA dGPU on x86_64 (v1 target). Jetson and ARM SBSA are roadmap items (the same image family is multi-arch, but they are not validated in v1).
 
 ---
@@ -285,6 +295,7 @@ Logs are line-oriented `key=value`, with levels `error|warn|info|debug`.
 - Throughput is bounded by the TensorRT engine. Start with FP16, a batch equal to `service.max_streams`, and a 640×640 input for YOLO-class models.
 - `inference.interval` > 0 skips detector frames; the tracker fills in the gaps (big savings at a small accuracy cost).
 - Event volume = streams × (fps / `interval_frames`). The default of 30 frames ≈ 1 event per second per stream.
+- Measured (RTX 5070 Ti Laptop GPU, RF-DETR Small FP16, 512×512): 4 × 30 FPS at 22–26 % GPU load without the UI; 4 × 60 FPS with the UI and annotated output at about 32 %.
 - Embeddings increase message size a lot (e.g. 256 floats ≈ 1.4 KB base64 per object). They are off by default.
 
 ---
@@ -292,6 +303,7 @@ Logs are line-oriented `key=value`, with levels `error|warn|info|debug`.
 ## 11. Security
 
 - The REST and ops ports are unauthenticated (DeepStream's REST server has no auth). Bind them to internal networks; put an authenticating gateway in front if they are exposed. `service.http_ip` defaults to `0.0.0.0` in containers; document the risk.
+- The web UI has no login either. It requires a custom header for changes (CSRF), checks the `Host` header (DNS rebinding), sends a strict content security policy and never shows camera URLs. Put an authenticating reverse proxy in front of it before opening it to other machines.
 - Kafka: support SASL/TLS through passthrough of librdkafka properties (`publish.kafka.properties`).
 - No secrets in the repo; read credentials from env or files.
 - Validate `camera_url` schemes (`rtsp`, `rtsps`, `file`, `http(s)`); reject others in our documentation and the orchestrator. Note that DeepStream's REST server accepts any URI.
@@ -309,3 +321,5 @@ Logs are line-oriented `key=value`, with levels `error|warn|info|debug`.
 | 5 | `model.yaml` + generator | hand-written DeepStream configs | Single source of truth; validation; licence metadata per model. |
 | 6 | Parser core free of DeepStream headers | parser directly on DeepStream types | Unit-testable in CI without a GPU; reusable by a future open-source backend. |
 | 7 | Ops server separate from the stream REST server | rely on DeepStream REST health routes | Public DeepStream does not guarantee health routes; we need metrics anyway. |
+| 8 | Web UI and replicator with the standard library and the image's GStreamer | web framework, MediaMTX, ffmpeg | No new dependency or licence; software codec packages are ruled out by docs/LICENSING.md §4. |
+| 9 | Live view from DeepStream's tiled, annotated RTSP output, cropped in the browser | one encoded output per camera; drawing boxes in the browser | One encode for all cameras; boxes always match the picture; the streaming thread is untouched. |

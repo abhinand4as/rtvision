@@ -98,6 +98,9 @@ RTVISION_MODEL=my-model docker compose -f deploy/compose/compose.yaml up -d
 until curl -sf localhost:9464/ready; do sleep 3; done
 ```
 
+Easiest with the web UI: add `-f deploy/compose/compose.ui.yaml`, create test cameras from your own
+videos on the *Replicator* page and look at the boxes on the *Live* page ([UI.md](UI.md)).
+
 The first start builds the engine (about a minute for small models) into the `rtvision_engines`
 volume. Add the sample stream (README quick start, step 4) and read the events: the labels,
 confidences and box positions must be plausible. For a quantitative check, run the same frame

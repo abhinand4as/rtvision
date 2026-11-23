@@ -24,7 +24,8 @@ For every file ported from RT-CV:
 | DeepStream SDK binaries, headers, sample sources (`deepstream-app`, `apps-common`) | NVIDIA EULA / their own licence terms. They are **compiled from inside the base image at build time**, not vendored. |
 | DeepStream sample models, configs, streams (TrafficCamNet, tracker YAMLs, sample videos) | NVIDIA AI Product License / EULA. Reference them **by path inside the container** only. |
 | Model weights of any kind (`.pt`, `.onnx`, `.engine`, `.etlt`) | Each has its own licence; users supply their own. |
-| Test videos | Unknown rights. Tests use the in-container DeepStream samples at runtime. |
+| Test and demo videos | Tests use the in-container DeepStream samples at runtime. The demo downloads a CC-BY-4.0 video (pinned commit, checksum) at run time; it is never committed. |
+| Screenshots of DeepStream samples or of videos without a clear licence | Pictures show their content. `docs/images/` holds only screenshots of openly licensed videos, with attribution in `docs/images/README.md`. |
 | Code copied from GPL/AGPL projects (e.g. Ultralytics) | Would force a copyleft licence on the repo. |
 
 ## 4. Build outputs and container images

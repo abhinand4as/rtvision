@@ -23,7 +23,7 @@ One JSON message per **sampled frame per stream** (sampling: `publish.interval_f
   "timestamp_source": "ntp",
   "sensor": { "id": "cam-entrance-01", "name": "Entrance 1", "stream_index": 0 },
   "frame": { "number": 1230, "width": 1920, "height": 1080 },
-  "model": { "name": "yolo26s-people", "version": "2026.1", "task": "detect" },
+  "model": { "name": "rfdetr-s-people", "version": "rfdetr-1.12.1-small", "task": "detect" },
   "objects": [
     {
       "track_id": 17,

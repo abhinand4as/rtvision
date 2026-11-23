@@ -24,7 +24,9 @@ This file is **regenerated before each release** by `tools/ci/third_party_report
 
 † Licence id added to the allow-list by the project owner on 2026-11-20 (`docs/LICENSING.md` §6).
 
-Not distributed by this project: model weights, DeepStream sample models/streams, Ultralytics software.
+Not distributed by this project: model weights, DeepStream sample models/streams, Ultralytics software, the demo video.
+
+Shown in `docs/images/live.png` and downloaded by `examples/demo` at run time: `store-aisle-detection.mp4`, Intel Corporation, <https://github.com/intel-iot-devkit/sample-videos>, CC-BY-4.0 (attribution and changes: `docs/images/README.md`).
 
 Used by the development/integration compose stack only (pulled from Docker Hub by the user, not part of the RTVision image):
 

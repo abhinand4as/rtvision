@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # HTTP APIs
 
-RTVision exposes two HTTP servers:
+RTVision exposes two HTTP servers (the optional web UI and replicator have their own, see [UI.md](UI.md) and [REPLICATOR.md](REPLICATOR.md)):
 
 | Port | Server | Purpose |
 |---|---|---|
@@ -14,7 +14,7 @@ Neither server authenticates requests. Expose them only on trusted networks or b
 
 ## Stream management (port 9000)
 
-The payload format is DeepStream's (`Gst-nvmultiurisrcbin` documentation). RTVision does not change it, so existing VST/RT-CV clients work unchanged. **Implementer:** verify the exact route list and response bodies against the DeepStream 9.1 docs, and record any differences in `docs/DEVIATIONS.md`.
+The payload format is DeepStream's (`Gst-nvmultiurisrcbin` documentation). RTVision does not change it, so existing VST/RT-CV clients work unchanged. Responses are JSON with `status` (e.g. `HTTP/1.1 200 OK`) and `reason` (e.g. `STREAM_ADD_SUCCESS`). `metadata` is optional.
 
 ### Add a stream
 `POST /api/v1/stream/add`
@@ -42,6 +42,11 @@ The payload format is DeepStream's (`Gst-nvmultiurisrcbin` documentation). RTVis
 
 A file source is removed by DeepStream itself when it reaches end-of-file; removing it again (or any stream that is not added) answers HTTP 500 `STREAM_REMOVE_FAIL, No record found`.
 
+Removing needs the **exact `camera_url`** the stream was added with. DeepStream can answer 200 without removing anything (seen with DeepStream 9.1): check `get-stream-info` afterwards.
+
+### List streams
+`GET /api/v1/stream/get-stream-info` — `camera_id`, `camera_name` and `source_id` of every stream (not the URL). `source_id` is also the stream's tile in the annotated output.
+
 ### Examples
 ```bash
 curl -sS -XPOST localhost:9000/api/v1/stream/add -d @add.json
@@ -59,7 +64,7 @@ curl -sS -XPOST localhost:9000/api/v1/stream/remove -d @remove.json
 | GET | `/live` | main-loop heartbeat < 10 s old | `{"status":"alive"}` |
 | GET | `/metrics` | always | Prometheus text exposition (v0.0.4) |
 | GET | `/events/latest` | last event of every camera, whether or not Kafka delivered it | `{"events":[{"age_ms":420,"event":{…}}]}` |
-| GET | `/info` | always | `{"service":"rtvision","version":"0.1.0","model":{"name","version","task","family","precision","license"},"max_streams":4,"schema":"rtvision.detection.v1"}` |
+| GET | `/info` | always | `{"service":"rtvision","version":"0.1.0","model":{"name","version","task","family","precision","license"},"max_streams":4,"interval_frames":30,"schema":"rtvision.detection.v1"}` |
 
 Non-200 responses use 503 with `{"status":"<reason>"}` (e.g. `starting`, `pipeline not playing`, `publisher not connected`, `main loop stalled`). Other methods than GET/HEAD get 405, unknown paths 404. `/live` answers 200 while the service is still starting (pipeline creation and TensorRT engine builds run before the main loop); use `/startup` as the startup probe.
 

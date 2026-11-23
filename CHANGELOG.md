@@ -10,7 +10,9 @@ All notable changes are documented here (format: Keep a Changelog; versioning: S
 - Web UI (`rtvision-ui`, `deploy/compose/compose.ui.yaml`): live annotated streams, performance and
   hardware, replicator management (upload, streams, start/stop).
 - Ops server `GET /events/latest`; `outputs.tiled` and `outputs.rtsp.bitrate`; box labels and track
-  ids in annotated outputs; `tests/integration/run_ui.sh`.
+  ids in annotated outputs; `interval_frames` in `/info`; `tests/integration/run_ui.sh`.
+- Demo `examples/demo` (four cameras from one CC-BY-4.0 online video) and screenshots in
+  `docs/images`; all documents updated for the new features.
 
 ## [0.1.0] - 2026-11-20
 ### Added

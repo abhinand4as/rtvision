@@ -38,4 +38,4 @@ Jetson (L4T, the same multi-arch image family) and ARM SBSA validation; INT8 cal
 A pure GStreamer + ONNX Runtime/Triton + ByteTrack backend behind the same configs, schema and REST contract. The parser `core/` is already DeepStream-free for this reason.
 
 ### Security
-Auth for the REST/ops APIs (mTLS or a token via gateway), Kafka TLS/SASL examples.
+Auth for the REST/ops APIs and the web UI (mTLS or a token via gateway), Kafka TLS/SASL examples.
