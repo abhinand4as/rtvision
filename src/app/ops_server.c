@@ -143,7 +143,8 @@ static void handle_info(SoupServerMessage *msg) {
     rtvision_json_append_string(b, app_cfg->model_precision);
     g_string_append(b, ",\"license\":");
     rtvision_json_append_string(b, app_cfg->model_license);
-    g_string_append_printf(b, "},\"max_streams\":%u,\"schema\":", app_cfg->max_streams);
+    g_string_append_printf(b, "},\"max_streams\":%u,\"interval_frames\":%u,\"schema\":",
+                           app_cfg->max_streams, app_cfg->publish.interval_frames);
     rtvision_json_append_string(b, RTVISION_SCHEMA_ID);
     g_string_append_c(b, '}');
     respond(msg, SOUP_STATUS_OK, "application/json", b->str, b->len);

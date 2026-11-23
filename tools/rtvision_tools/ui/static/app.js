@@ -6,7 +6,7 @@ import * as live from "./live.js";
 import * as performance from "./performance.js";
 import * as replicator from "./replicator.js";
 
-const POLL_MS = 1500;
+const POLL_MS = 1000;
 const pages = { live, performance, replicator };
 let current = null;
 

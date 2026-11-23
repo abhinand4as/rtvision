@@ -106,9 +106,17 @@ def test_overview(fake) -> None:
 
 
 def test_old_events_mean_nothing_in_view(fake) -> None:
-    fake.age_ms = backend.EVENT_MAX_AGE_MS + 1
+    fake.age_ms = 2000  # 30 FPS, one event per 30 frames: 1 s apart
     s = make_client(fake).overview()["streams"][0]
     assert s["objects"] == {} and s["event_age_ms"] == fake.age_ms
+
+
+@pytest.mark.parametrize(
+    ("interval", "fps", "limit"),
+    [(30, 30.0, 1750), (30, 60.0, 1000), (30, 10.0, 4750), (1, 30.0, 750), (30, 0.0, 4750)],
+)
+def test_event_age_limit_follows_interval_and_fps(interval, fps, limit) -> None:
+    assert backend.event_max_age_ms(interval, fps) == limit
 
 
 def test_add_camera(fake) -> None:

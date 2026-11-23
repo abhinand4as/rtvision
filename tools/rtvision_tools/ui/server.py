@@ -18,6 +18,7 @@ import ipaddress
 import json
 import os
 import re
+import signal
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -333,6 +334,8 @@ def main(argv: list[str] | None = None) -> int:
     if preview:
         preview.warm_up()
     print(f"RTVision UI on http://{args.host}:{args.port}/", flush=True)
+    # As PID 1 in a container, Python ignores SIGTERM unless it is handled.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     try:
         server.serve_forever()
     except KeyboardInterrupt:

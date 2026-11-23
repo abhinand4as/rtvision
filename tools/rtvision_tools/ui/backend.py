@@ -20,15 +20,21 @@ from urllib.parse import urlsplit
 from ..gen_configs import tiler
 from .hardware import HardwareMonitor
 
-SAMPLE_S = 2.0
-HISTORY = 150  # samples: 5 minutes
+SAMPLE_S = 1.0
+HISTORY = 300  # samples: 5 minutes
 REMOVE_CHECKS = 24  # x 0.25 s
-EVENT_MAX_AGE_MS = 3000  # older events mean "nothing detected right now"
 URL_SCHEMES = ("rtsp", "rtsps", "file", "http", "https")
 CAMERA_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$")
 _SAMPLE_RE = re.compile(r"^([a-zA-Z_:][\w:]*)(?:\{(.*)\})?\s+(\S+)$")
 _LABEL_RE = re.compile(r'([a-zA-Z_]\w*)="((?:[^"\\]|\\.)*)"')
 _ESCAPES = {"\\n": "\n", '\\"': '"', "\\\\": "\\"}
+
+
+def event_max_age_ms(interval_frames: int, fps: float) -> int:
+    """Frames without objects are not published: an event older than about one and a half publish
+    intervals means "nothing in view now"."""
+    interval_ms = 1000.0 * interval_frames / fps if fps >= 1 else 3000.0
+    return int(min(max(1.5 * interval_ms + 250, 750), 10000))
 
 
 class BackendError(Exception):
@@ -169,10 +175,12 @@ class RTVisionClient:
                 key = name + (f"_{labels['result']}" if "result" in labels else "")
                 totals[key] = totals.get(key, 0) + value
 
+        interval = int(info.get("interval_frames") or 30)
         events = {e["event"]["sensor"]["id"]: e for e in latest}
         for s in streams:
             e = events.get(s["id"])
-            fresh = e is not None and e["age_ms"] <= EVENT_MAX_AGE_MS
+            limit = event_max_age_ms(interval, fps.get(s["id"], 0.0))
+            fresh = e is not None and e["age_ms"] <= limit
             counts: dict[str, int] = {}
             for o in e["event"]["objects"] if fresh else []:
                 counts[o["label"]] = counts.get(o["label"], 0) + 1

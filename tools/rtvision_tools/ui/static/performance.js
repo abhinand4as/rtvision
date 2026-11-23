@@ -99,5 +99,5 @@ export function update(ov, hw, history) {
     { title: "GPU %", num: true, cell: (p) => num(p.gpu) },
     { title: "CPU %", num: true, cell: (p) => num(p.cpu, 1) },
     { title: "Memory %", num: true, cell: (p) => num(p.ram, 1) },
-  ], pts.slice(-150).filter((_, i, a) => (a.length - 1 - i) % 5 === 0).reverse(), "No data yet");
+  ], pts.filter((_, i, a) => (a.length - 1 - i) % 10 === 0).reverse(), "No data yet");
 }

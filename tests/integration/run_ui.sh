@@ -10,8 +10,8 @@
 #   tests/integration/run_ui.sh                 # KEEP_STACK=1 leaves it running
 #   IT_VIDEO=/path/to/video.mp4 ...             # default: the sample video of the DeepStream image
 #
-# Existing replicator videos and configuration (volume rtvision_videos) are kept: the test uses
-# its own video name and restores the previous stream list at the end.
+# Runs in its own compose project (rtvision-it, its volumes are removed at the end); the ports must
+# be free, so stop a running stack first.
 set -euo pipefail
 # shellcheck source=tests/integration/common.sh
 source "$(dirname "$0")/common.sh"
@@ -19,12 +19,13 @@ source "$(dirname "$0")/common.sh"
 : "${RTVISION_UI_PORT:=8080}"
 : "${RTVISION_MODEL:=rfdetr-s-coco}"
 : "${IT_VIDEO:=}"
-export RTVISION_UI_PORT RTVISION_MODEL
+# Own compose project: never touches the videos, streams or cameras of a normal `rtvision` stack.
+: "${COMPOSE_PROJECT_NAME:=rtvision-it}"
+export RTVISION_UI_PORT RTVISION_MODEL COMPOSE_PROJECT_NAME
 UI="http://$RTVISION_HOST:$RTVISION_UI_PORT"
 PYTHON="${PYTHON:-python3}"
 NAME=it-video.mp4
 work="$(mktemp -d)"
-saved=""
 
 stack() { docker compose -f "$COMPOSE_FILE" -f "$REPO_ROOT/deploy/compose/compose.ui.yaml" "$@"; }
 # ui METHOD PATH [curl args...] -> body; fails on HTTP errors
@@ -36,9 +37,7 @@ finish() {
     local rc=$?
     if ((rc != 0)); then stack logs --no-color --tail 20 rtvision ui replicator >&2 2>&1 || true; fi
     if [[ "${KEEP_STACK:-0}" != 1 ]]; then
-        if [[ -n "$saved" ]]; then ui PUT /api/replicator/config -d "$saved" >/dev/null 2>&1 || true; fi
-        ui DELETE "/api/replicator/videos/$NAME" >/dev/null 2>&1 || true
-        stack down --remove-orphans >/dev/null 2>&1 || true
+        stack down --volumes --remove-orphans >/dev/null 2>&1 || true
     fi
     rm -rf "$work"
     if ((rc == 0)); then echo "PASS: UI integration test"; else echo "FAIL: UI integration test" >&2; fi
@@ -65,7 +64,6 @@ if [[ -z "$IT_VIDEO" ]]; then
     stack cp "rtvision:${IT_CAMERA_URL#file://}" "$work/sample.mp4" >/dev/null 2>&1
     IT_VIDEO="$work/sample.mp4"
 fi
-saved="$(ui GET /api/replicator/config)"
 info="$(ui PUT "/api/replicator/videos/$NAME" --data-binary @"$IT_VIDEO")" || fail "upload: $info"
 pass "video uploaded: $info"
 length="$("$PYTHON" -c 'import sys,json; print(int(json.loads(sys.argv[1])["duration_s"]) + 1)' "$info")"
