@@ -44,6 +44,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends shellcheck
           git ls-files -z '*.sh' | xargs -0 -r shellcheck -x
           docker compose -f deploy/compose/compose.yaml config -q
+          docker compose -f deploy/compose/compose.yaml -f deploy/compose/compose.ui.yaml config -q
 
   python-tests:
     runs-on: ubuntu-24.04

@@ -23,6 +23,8 @@ dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
 rtvision-run = "rtvision_tools.run:main"
+rtvision-replicator = "rtvision_tools.replicator.cli:main"
+rtvision-ui = "rtvision_tools.ui.server:main"
 
 [tool.setuptools.packages.find]
 where = ["tools"]
@@ -30,6 +32,7 @@ include = ["rtvision_tools*"]
 
 [tool.setuptools.package-data]
 rtvision_tools = ["templates/*.j2"]
+"rtvision_tools.ui" = ["static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]

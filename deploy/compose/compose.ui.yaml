@@ -1,0 +1,72 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Abhinand A S
+#
+# Overlay: web UI + RTSP stream replicator on top of compose.yaml.
+#
+#   docker compose -f deploy/compose/compose.yaml -f deploy/compose/compose.ui.yaml up -d --build
+#   open http://localhost:8080/
+#
+# Knobs (see .env.example): RTVISION_BIND, RTVISION_UI_PORT, REPLICATOR_PORT, RTVISION_GPU,
+# RTVISION_UI_ALLOWED_HOSTS.
+# There is no login: everything is published on 127.0.0.1 unless RTVISION_BIND is set.
+
+services:
+  rtvision:
+    environment:
+      # Annotated tiled video for the Live page (not published on the host).
+      RTVISION__OUTPUTS__RTSP__PORT: "8554"
+      RTVISION__OUTPUTS__RTSP__BITRATE: "8000000"
+      RTVISION__OUTPUTS__TILED__WIDTH: "1920"
+      RTVISION__OUTPUTS__TILED__HEIGHT: "1080"
+      RTVISION__OBSERVABILITY__PERF_INTERVAL_S: "2"
+
+  replicator:
+    image: ${RTVISION_IMAGE:-rtvision:local}
+    command: ["rtvision-replicator", "--videos-dir", "/opt/rtvision/videos",
+              "--config", "/opt/rtvision/videos/replicator.yaml",
+              "--public-host", "replicator", "--api-host", "0.0.0.0", "--api-port", "8090"]
+    ports:
+      # RTSP only (e.g. for VLC); the control API is reachable through the UI.
+      - "${RTVISION_BIND:-127.0.0.1}:${REPLICATOR_PORT:-8554}:8554"
+    volumes:
+      - videos:/opt/rtvision/videos
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8090/api/status"]
+      interval: 10s
+      timeout: 3s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+
+  ui:
+    image: ${RTVISION_IMAGE:-rtvision:local}
+    command: ["rtvision-ui", "--host", "0.0.0.0", "--port", "8080",
+              "--ops-url", "http://rtvision:9464", "--rest-url", "http://rtvision:9000",
+              "--preview-url", "rtsp://rtvision:8554/ds-test",
+              "--replicator-url", "http://replicator:8090",
+              "--state-file", "/opt/rtvision/state/cameras.json"]
+    environment:
+      RTVISION_UI_ALLOWED_HOSTS: ${RTVISION_UI_ALLOWED_HOSTS:-}
+    ports:
+      - "${RTVISION_BIND:-127.0.0.1}:${RTVISION_UI_PORT:-8080}:8080"
+    volumes:
+      - ui-state:/opt/rtvision/state
+    deploy:
+      resources:
+        reservations:
+          devices:
+            # Hardware video decoding for the Live page and nvidia-smi for the Performance page.
+            - driver: nvidia
+              device_ids: ["${RTVISION_GPU:-0}"]
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  videos:
+  ui-state:

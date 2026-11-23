@@ -55,7 +55,11 @@ RUN set -eux; \
     rm -rf /tmp/rtvision-tools /opt/rtvision/python/onnx/backend/test/data; \
     mkdir -p /opt/rtvision/bin /opt/rtvision/engines /opt/rtvision/output; \
     printf '#!/bin/sh\nexec python3 -m rtvision_tools.run "$@"\n' > /opt/rtvision/bin/rtvision-run; \
-    chmod 0755 /opt/rtvision/bin/rtvision-run
+    printf '#!/bin/sh\nexec python3 -m rtvision_tools.replicator.cli "$@"\n' > /opt/rtvision/bin/rtvision-replicator; \
+    printf '#!/bin/sh\nexec python3 -m rtvision_tools.ui.server "$@"\n' > /opt/rtvision/bin/rtvision-ui; \
+    chmod 0755 /opt/rtvision/bin/rtvision-run /opt/rtvision/bin/rtvision-replicator \
+        /opt/rtvision/bin/rtvision-ui; \
+    mkdir -p /opt/rtvision/videos /opt/rtvision/state
 
 COPY --from=build /src/src/app/rtvision /opt/rtvision/bin/rtvision
 COPY --from=build /src/src/parsers/librtvision_parsers.so /opt/rtvision/lib/librtvision_parsers.so
@@ -76,7 +80,8 @@ RUN set -eux; \
     else \
         groupadd -g 1000 rtvision; useradd -u 1000 -g 1000 -m -d /home/rtvision rtvision; \
     fi; \
-    chown -R 1000:1000 /opt/rtvision/engines /opt/rtvision/output; \
+    chown -R 1000:1000 /opt/rtvision/engines /opt/rtvision/output /opt/rtvision/videos \
+        /opt/rtvision/state; \
     chmod 0755 /opt/rtvision/bin/entrypoint.sh
 
 ENV PATH=/opt/rtvision/bin:${PATH} \
@@ -94,5 +99,6 @@ HEALTHCHECK --interval=15s --timeout=3s --start-period=60s --retries=3 \
     CMD curl -fsS -o /dev/null "http://127.0.0.1:${RTVISION__OBSERVABILITY__OPS_PORT:-9464}/live" || exit 1
 
 # Select the model with RTVISION_MODEL (name under /opt/rtvision/models or a path).
+# The same image also runs the web UI (rtvision-ui) and the RTSP replicator (rtvision-replicator).
 # `docker run IMAGE --dry-run` passes flags to rtvision-run; `docker run IMAGE bash` runs bash.
 ENTRYPOINT ["entrypoint.sh"]
