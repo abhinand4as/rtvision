@@ -56,6 +56,7 @@ DOC_SUFFIXES = {".md", ".yaml", ".yml", ".ini", ".toml", ".json", ".cfg"}
 DOC_NAMES = {".gitignore", ".dockerignore", ".editorconfig", ".clang-format", ".env.example"}
 
 EXEMPT = [
+    "docs/images/*.png",  # licences and attribution: docs/images/README.md
     "LICENSE",
     "NOTICE",
     "**/.gitkeep",
