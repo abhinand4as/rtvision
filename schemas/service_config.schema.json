@@ -115,7 +115,19 @@
         "rtsp": {
           "type": ["object", "null"],
           "additionalProperties": false,
-          "properties": { "port": { "type": "integer" }, "udp_port": { "type": "integer" } }
+          "properties": {
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535, "default": 8554 },
+            "udp_port": { "type": "integer", "minimum": 1, "maximum": 65535, "default": 5400 },
+            "bitrate": { "type": "integer", "minimum": 100000, "default": 4000000 }
+          }
+        },
+        "tiled": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "width": { "type": "integer", "minimum": 160, "maximum": 7680, "default": 1280 },
+            "height": { "type": "integer", "minimum": 120, "maximum": 4320, "default": 720 }
+          }
         }
       }
     },

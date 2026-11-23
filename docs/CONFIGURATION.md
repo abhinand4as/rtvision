@@ -83,7 +83,10 @@ publish:
 outputs:                          # optional visual outputs (debug)
   display: false                  # EGL tiled display + OSD (needs X)
   file: null                      # e.g. /opt/rtvision/output/annotated.mp4
-  rtsp: null                      # e.g. { port: 8554, udp_port: 5400 }
+  rtsp: null                      # annotated tiled video at rtsp://host:<port>/ds-test, e.g.
+                                  # { port: 8554, udp_port: 5400, bitrate: 4000000 }; the web UI
+                                  # needs it (deploy/compose/compose.ui.yaml enables it)
+  tiled: { width: 1280, height: 720 }   # size of the tiled video (one tile per max_streams slot)
 
 observability:
   ops_port: 9464

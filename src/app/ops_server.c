@@ -187,6 +187,11 @@ static void handler(SoupServer *srv, SoupServerMessage *msg, const char *path, G
         handle_metrics(msg);
     } else if (strcmp(path, "/info") == 0) {
         handle_info(msg);
+    } else if (strcmp(path, "/events/latest") == 0) {
+        gchar *json =
+            publisher ? rtvision_publisher_latest_json(publisher) : g_strdup("{\"events\":[]}");
+        respond(msg, SOUP_STATUS_OK, "application/json", json, strlen(json));
+        g_free(json);
     } else {
         static const char body[] = "{\"status\":\"not found\"}";
         respond(msg, SOUP_STATUS_NOT_FOUND, "application/json", body, sizeof(body) - 1);
@@ -244,7 +249,10 @@ gboolean rtvision_ops_start(guint port, const RTVisionAppConfig *cfg, RTVisionPu
         rtvision_ops_stop();
         return FALSE;
     }
-    PLOG_INFO("ops", "event=listening port=%u paths=/live,/ready,/startup,/metrics,/info", port);
+    PLOG_INFO("ops",
+              "event=listening port=%u paths=/live,/ready,/startup,/metrics,/info,"
+              "/events/latest",
+              port);
     return TRUE;
 }
 

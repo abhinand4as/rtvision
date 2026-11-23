@@ -282,6 +282,8 @@ int main(int argc, char *argv[]) {
     }
     if (opt_force_tcp)
         apply_force_tcp(&app_ctx->config);
+    /* Label + track id next to each box, only when something draws (annotated outputs). */
+    app_ctx->show_bbox_text = app_ctx->config.osd_config.enable;
 
     const RTVisionTaskHandler *handler = rtvision_task_get(app_cfg.model_task);
     GError *task_error = NULL;

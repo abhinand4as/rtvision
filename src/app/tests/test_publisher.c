@@ -183,6 +183,50 @@ static void test_file_backend(void) {
     g_free(dir);
 }
 
+static guint count_of(const char *haystack, const char *needle) {
+    guint n = 0;
+    for (const char *p = haystack; (p = strstr(p, needle)) != NULL; p += strlen(needle))
+        n++;
+    return n;
+}
+
+static void test_latest(void) {
+    MockBackend *m = mock_new(TRUE);
+    RTVisionPublisher *p =
+        rtvision_publisher_new(&m->base, &kCtx, 1000, RTVISION_DROP_OLDEST, TRUE);
+    gchar *json = rtvision_publisher_latest_json(p);
+    CHECK(strcmp(json, "{\"events\":[]}") == 0);
+    g_free(json);
+
+    /* Two cameras, several events each: exactly one entry per camera. */
+    for (int i = 0; i < 5; i++) {
+        rtvision_publisher_enqueue(p, ev("a"));
+        rtvision_publisher_enqueue(p, ev("b"));
+    }
+    CHECK(rtvision_publisher_shutdown(p, 2000));
+    json = rtvision_publisher_latest_json(p);
+    CHECK(count_of(json, "\"age_ms\":") == 2);
+    CHECK(count_of(json, "\"sensor\":{\"id\":\"a\"") == 1);
+    CHECK(count_of(json, "\"sensor\":{\"id\":\"b\"") == 1);
+    g_free(json);
+    rtvision_publisher_free(p);
+
+    /* Bounded: more cameras than LATEST_MAX (256) keep only the newest 256. */
+    m = mock_new(TRUE);
+    p = rtvision_publisher_new(&m->base, &kCtx, 1000, RTVISION_DROP_OLDEST, TRUE);
+    for (int i = 0; i < 300; i++) {
+        gchar *id = g_strdup_printf("cam%03d", i);
+        rtvision_publisher_enqueue(p, ev(id));
+        g_free(id);
+    }
+    CHECK(rtvision_publisher_shutdown(p, 2000));
+    json = rtvision_publisher_latest_json(p);
+    CHECK(count_of(json, "\"age_ms\":") == 256);
+    CHECK(strstr(json, "\"cam299\"") != NULL);
+    g_free(json);
+    rtvision_publisher_free(p);
+}
+
 int main(void) {
     rtvision_log_set_level(RTVISION_LOG_ERROR);
     test_policy(RTVISION_DROP_OLDEST, "adef"); /* b, c dropped */
@@ -190,6 +234,7 @@ int main(void) {
     test_clean_flush();
     test_shutdown_deadline();
     test_file_backend();
+    test_latest();
     printf("%s: publisher tests (%d failures)\n", failures ? "FAIL" : "PASS", failures);
     return failures ? 1 : 0;
 }

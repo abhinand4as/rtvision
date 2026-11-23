@@ -9,6 +9,14 @@
 #include "event_serialize.h"
 #include "log.h"
 
+/* Cameras remembered for rtvision_publisher_latest_json(); the stalest is evicted beyond that. */
+#define LATEST_MAX 256
+
+typedef struct {
+    gchar *json;
+    gint64 at_us; /* monotonic */
+} LatestEvent;
+
 #define WORKER_IDLE_WAIT_US (100 * G_TIME_SPAN_MILLISECOND)
 
 struct RTVisionPublisher {
@@ -26,6 +34,9 @@ struct RTVisionPublisher {
     gboolean shut_down;
     GThread *worker;
 
+    GMutex latest_lock;
+    GHashTable *latest; /* sensor id -> LatestEvent */
+
     guint64 enqueued, published, dropped, failed; /* atomic (__atomic builtins) */
 };
 
@@ -39,6 +50,60 @@ static guint64 get(const guint64 *counter) {
 
 void rtvision_publisher_report_delivery(RTVisionPublisher *pub, gboolean ok) {
     add(ok ? &pub->published : &pub->failed, 1);
+}
+
+static void latest_free(gpointer data) {
+    LatestEvent *l = data;
+    g_free(l->json);
+    g_free(l);
+}
+
+/* Worker thread: remember the last event of each camera (for GET /events/latest). */
+static void remember_latest(RTVisionPublisher *pub, const char *sensor_id, const GString *json) {
+    LatestEvent *l = g_new(LatestEvent, 1);
+    l->json = g_strndup(json->str, json->len);
+    l->at_us = g_get_monotonic_time();
+
+    g_mutex_lock(&pub->latest_lock);
+    if (g_hash_table_size(pub->latest) >= LATEST_MAX &&
+        !g_hash_table_contains(pub->latest, sensor_id)) {
+        GHashTableIter it;
+        gpointer key, value, oldest = NULL;
+        gint64 oldest_us = G_MAXINT64;
+        g_hash_table_iter_init(&it, pub->latest);
+        while (g_hash_table_iter_next(&it, &key, &value)) {
+            if (((LatestEvent *)value)->at_us < oldest_us) {
+                oldest_us = ((LatestEvent *)value)->at_us;
+                oldest = key;
+            }
+        }
+        g_hash_table_remove(pub->latest, oldest);
+    }
+    g_hash_table_replace(pub->latest, g_strdup(sensor_id), l);
+    g_mutex_unlock(&pub->latest_lock);
+}
+
+gchar *rtvision_publisher_latest_json(RTVisionPublisher *pub) {
+    GString *out = g_string_new("{\"events\":[");
+    GHashTableIter it;
+    gpointer value;
+    gboolean first = TRUE;
+
+    g_mutex_lock(&pub->latest_lock);
+    gint64 now = g_get_monotonic_time();
+    g_hash_table_iter_init(&it, pub->latest);
+    while (g_hash_table_iter_next(&it, NULL, &value)) {
+        const LatestEvent *l = value;
+        g_string_append_printf(out,
+                               "%s{\"age_ms\":%" G_GINT64_FORMAT ",\"event\":", first ? "" : ",",
+                               MAX(now - l->at_us, 0) / 1000);
+        g_string_append(out, l->json);
+        g_string_append_c(out, '}');
+        first = FALSE;
+    }
+    g_mutex_unlock(&pub->latest_lock);
+    g_string_append(out, "]}");
+    return g_string_free(out, FALSE);
 }
 
 static gpointer worker_main(gpointer data) {
@@ -76,6 +141,7 @@ static gpointer worker_main(gpointer data) {
         g_mutex_unlock(&pub->lock);
 
         rtvision_event_to_json(ev, &pub->ctx, json);
+        remember_latest(pub, ev->sensor_id ? ev->sensor_id : "", json);
         const char *key = pub->key_by_sensor ? ev->sensor_id : NULL;
         gboolean ok = pub->backend->ops->send(pub->backend, key, json->str, json->len, &error);
         if (!ok) {
@@ -110,6 +176,8 @@ RTVisionPublisher *rtvision_publisher_new(RTVisionBackend *backend, const RTVisi
     g_mutex_init(&pub->lock);
     g_cond_init(&pub->cond);
     g_queue_init(&pub->queue);
+    g_mutex_init(&pub->latest_lock);
+    pub->latest = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, latest_free);
     pub->worker = g_thread_new("rtvision-publisher", worker_main, pub);
     PLOG_INFO("publisher", "event=started backend=%s max_events=%u on_full=%s key=%s",
               backend->ops->name, pub->max_events,
@@ -190,6 +258,8 @@ void rtvision_publisher_free(RTVisionPublisher *pub) {
         rtvision_publisher_shutdown(pub, 0);
     pub->backend->ops->destroy(pub->backend);
     g_queue_clear(&pub->queue);
+    g_hash_table_destroy(pub->latest);
+    g_mutex_clear(&pub->latest_lock);
     g_mutex_clear(&pub->lock);
     g_cond_clear(&pub->cond);
     g_free(pub);

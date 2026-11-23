@@ -73,6 +73,10 @@ void rtvision_publisher_free(RTVisionPublisher *pub); /* calls shutdown(0) if ne
 
 void rtvision_publisher_get_stats(RTVisionPublisher *pub, RTVisionPublisherStats *out);
 
+/* {"events":[{"age_ms":N,"event":{...}}]}: the last event of every camera, whether or not the
+ * backend delivered it. Thread-safe; free with g_free(). */
+gchar *rtvision_publisher_latest_json(RTVisionPublisher *pub);
+
 /* Backends (publisher_stream.c, publisher_kafka.c). */
 /* JSON Lines on a file descriptor that the backend takes ownership of (e.g. a dup of stdout). */
 RTVisionBackend *rtvision_backend_stream_new_fd(int fd, GError **error);
