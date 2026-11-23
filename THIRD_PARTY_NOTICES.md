@@ -45,7 +45,7 @@ Used on the host to export the default model (`tools/export/rfdetr`, own virtual
 | certifi, tqdm (transitive) | | MPL-2.0 (file-level copyleft; unmodified) | https://github.com/certifi/python-certifi |
 
 <!-- BEGIN GENERATED: tools/ci/third_party_report.py -->
-## Generated report: contents of `rtvision:local` (image `9a649eb5a67f`)
+## Generated report: contents of `rtvision:local` (image `af446fdaf48b`)
 
 Base image `nvcr.io/nvidia/deepstream:9.1-samples-multiarch`. Regenerate after any change to the Dockerfile or the Python dependencies: `python3 tools/ci/third_party_report.py --image rtvision:local --write`.
 
