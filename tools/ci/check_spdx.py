@@ -37,7 +37,20 @@ NVIDIA_NOTICE = (
     "All rights reserved."
 )
 
-CODE_SUFFIXES = {".c", ".h", ".cc", ".cpp", ".hpp", ".py", ".sh", ".j2"}
+CODE_SUFFIXES = {
+    ".c",
+    ".h",
+    ".cc",
+    ".cpp",
+    ".hpp",
+    ".py",
+    ".sh",
+    ".j2",
+    ".js",
+    ".css",
+    ".html",
+    ".svg",
+}
 CODE_NAMES = {"Makefile", "Dockerfile"}
 DOC_SUFFIXES = {".md", ".yaml", ".yml", ".ini", ".toml", ".json", ".cfg"}
 DOC_NAMES = {".gitignore", ".dockerignore", ".editorconfig", ".clang-format", ".env.example"}

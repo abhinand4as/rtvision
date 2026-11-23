@@ -40,6 +40,8 @@ def test_no_forbidden_files() -> None:
         ("a.md", "# no header\n", False),
         ("a.xyz", "SPDX-License-Identifier: Apache-2.0\n", False),  # unknown type
         ("labels.txt", "person\n", True),  # exempt
+        ("a.js", "// SPDX-License-Identifier: Apache-2.0\n// Copyright (c) 2026 X\n", True),
+        ("a.css", "/* SPDX-License-Identifier: Apache-2.0 */\n", False),  # needs copyright
         (
             "d.c",
             "/*\n * SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & "

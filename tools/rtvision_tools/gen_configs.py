@@ -329,7 +329,7 @@ def _reid_tracker_config(ctx: GenContext, sample_file: str | None) -> str | None
     return header + "%YAML:1.0\n" + yaml.safe_dump(data, sort_keys=False, default_flow_style=None)
 
 
-def _tiler(n: int) -> tuple[int, int]:
+def tiler(n: int) -> tuple[int, int]:
     cols = math.ceil(math.sqrt(n))
     return math.ceil(n / cols), cols
 
@@ -403,7 +403,7 @@ def generate(ctx: GenContext) -> dict[str, str]:
 
     outputs = svc["outputs"]
     visual = bool(outputs["display"] or outputs["file"] or outputs["rtsp"])
-    rows, cols = _tiler(batch)
+    rows, cols = tiler(batch)
 
     env = _env()
     pgie_path = out_dir / "pgie.ini"

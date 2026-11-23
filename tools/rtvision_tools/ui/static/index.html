@@ -1,0 +1,121 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- Copyright (c) 2026 Abhinand A S -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RTVision</title>
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/theme.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/live" data-nav><img src="/static/icon.svg" alt="" width="24" height="24">RTVision</a>
+    <nav aria-label="Pages">
+      <a href="/live" data-nav>Live</a>
+      <a href="/performance" data-nav>Performance</a>
+      <a href="/replicator" data-nav>Replicator</a>
+    </nav>
+    <div class="topbar-right">
+      <span id="service-status" class="status" role="status"></span>
+      <button id="theme" class="btn ghost sm" type="button">Light / dark</button>
+    </div>
+  </header>
+
+  <main id="page-live" class="page" hidden>
+    <div class="page-head">
+      <div><h1>Live</h1><p id="live-summary" class="muted"></p></div>
+      <div class="actions"><button id="add-camera" class="btn primary" type="button">Add camera</button></div>
+    </div>
+    <p id="live-notice" class="notice" hidden></p>
+    <div id="live-grid" class="live-grid"></div>
+    <div id="live-empty" class="empty" hidden>
+      <h2>No cameras yet</h2>
+      <p>Add an RTSP camera, or create test cameras from your own videos.</p>
+      <p><a class="btn" href="/replicator" data-nav>Open the replicator</a></p>
+    </div>
+  </main>
+
+  <main id="page-performance" class="page" hidden>
+    <div class="page-head"><div><h1>Performance</h1><p class="muted">Last 5 minutes, updated every 2 seconds</p></div></div>
+    <p id="perf-notice" class="notice" hidden></p>
+    <section id="perf-tiles" class="tiles" aria-label="Key figures"></section>
+    <section class="two">
+      <div class="card"><h2>Total throughput</h2><p class="muted small">Frames per second, all cameras</p><div id="chart-fps" class="chart"></div></div>
+      <div class="card"><h2>Detections</h2><p class="muted small">Objects detected per second, all cameras</p><div id="chart-det" class="chart"></div></div>
+    </section>
+    <section class="side">
+      <div class="card"><h2>Cameras</h2><div class="scroll"><table id="perf-cameras"></table></div></div>
+      <div class="card"><h2>Model</h2><dl id="perf-model" class="facts"></dl></div>
+    </section>
+    <h2 class="section-title">Hardware</h2>
+    <section id="hw-cards" class="hw"></section>
+    <section class="three">
+      <div class="card"><h2>GPU load</h2><div id="chart-gpu" class="chart"></div></div>
+      <div class="card"><h2>CPU load</h2><div id="chart-cpu" class="chart"></div></div>
+      <div class="card"><h2>Memory in use</h2><div id="chart-ram" class="chart"></div></div>
+    </section>
+    <details class="card"><summary>Show the chart data as a table</summary><div class="scroll"><table id="perf-table"></table></div></details>
+  </main>
+
+  <main id="page-replicator" class="page" hidden>
+    <div class="page-head">
+      <div><h1>RTSP replicator</h1><p class="muted">Plays your videos as looping, real-time RTSP cameras</p></div>
+      <div class="actions">
+        <button id="rep-toggle" class="btn" type="button" disabled></button>
+        <button id="rep-add-all" class="btn primary" type="button" disabled>Add all to RTVision</button>
+      </div>
+    </div>
+    <p id="rep-notice" class="notice" hidden></p>
+    <section class="card">
+      <h2>Streams</h2>
+      <div class="scroll"><table id="rep-status"></table></div>
+    </section>
+    <section class="two">
+      <div class="card">
+        <h2>Videos</h2>
+        <label id="drop" class="drop" tabindex="0">
+          <input id="file" type="file" multiple accept=".mp4,.mov,.m4v,.mkv,.ts,video/*">
+          <span><strong>Choose videos</strong> or drop them here</span>
+          <span class="muted small">H.264 or H.265 in mp4, mov, m4v, mkv or ts</span>
+        </label>
+        <ul id="uploads" class="uploads"></ul>
+        <div class="scroll"><table id="videos"></table></div>
+      </div>
+      <div class="card">
+        <h2>Configuration</h2>
+        <form id="rep-form">
+          <div class="quick">
+            <label>Streams <input id="quick-count" type="number" min="1" max="64" value="4"></label>
+            <button id="quick-fill" class="btn" type="button">Fill from all videos</button>
+          </div>
+          <div class="scroll"><table id="rep-config"></table></div>
+          <div class="form-actions">
+            <button id="rep-add-row" class="btn" type="button">Add stream</button>
+            <span class="spacer"></span>
+            <button id="rep-reset" class="btn ghost" type="button" disabled>Discard changes</button>
+            <button id="rep-save" class="btn primary" type="submit" disabled>Save and apply</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="camera-dialog">
+    <form method="dialog" id="camera-form">
+      <h2>Add camera</h2>
+      <label>Camera id <input name="id" required maxlength="63" pattern="[A-Za-z0-9][A-Za-z0-9._\-]*" placeholder="entrance-1" autocomplete="off"></label>
+      <label>Name <input name="name" maxlength="128" placeholder="Entrance" autocomplete="off"></label>
+      <label>URL <input name="url" required maxlength="1024" placeholder="rtsp://user:password@192.0.2.10:554/stream1" autocomplete="off" spellcheck="false"></label>
+      <p id="camera-error" class="notice bad" hidden></p>
+      <div class="form-actions"><span class="spacer"></span>
+        <button class="btn ghost" type="button" id="camera-cancel">Cancel</button>
+        <button class="btn primary" type="submit">Add camera</button></div>
+    </form>
+  </dialog>
+  <div id="toasts" role="status" aria-live="polite"></div>
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>
